@@ -2,6 +2,16 @@ package com.misuper.backend.plugins
 
 import com.misuper.backend.database.DatabaseFactory
 import com.misuper.backend.modules.auth.routes.AuthRoutes
+import com.misuper.backend.modules.budgets.routes.BudgetRoutes
+import com.misuper.backend.modules.groups.routes.GroupRoutes
+import com.misuper.backend.modules.notifications.routes.NotificationRoutes
+import com.misuper.backend.modules.offers.routes.OfferRoutes
+import com.misuper.backend.modules.statistics.routes.StatisticsRoutes
+import com.misuper.backend.modules.tickets.routes.TicketRoutes
+import com.misuper.backend.modules.products.routes.ProductRoutes
+import com.misuper.backend.modules.purchases.routes.PurchaseRoutes
+import com.misuper.backend.modules.stores.routes.StoreRoutes
+import com.misuper.backend.modules.users.routes.UserRoutes
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -30,7 +40,21 @@ data class DatabaseInfo(
     val idleConnections: Int
 )
 
-fun Application.configureRouting(authRoutes: AuthRoutes, serverPort: Int, startTime: Long) {
+fun Application.configureRouting(
+    authRoutes: AuthRoutes,
+    userRoutes: UserRoutes,
+    productRoutes: ProductRoutes,
+    storeRoutes: StoreRoutes,
+    groupRoutes: GroupRoutes,
+    purchaseRoutes: PurchaseRoutes,
+    budgetRoutes: BudgetRoutes,
+    ticketRoutes: TicketRoutes,
+    notificationRoutes: NotificationRoutes,
+    statisticsRoutes: StatisticsRoutes,
+    offerRoutes: OfferRoutes,
+    serverPort: Int,
+    startTime: Long
+) {
     routing {
         get("/") {
             val uptime = System.currentTimeMillis() - startTime
@@ -49,6 +73,16 @@ fun Application.configureRouting(authRoutes: AuthRoutes, serverPort: Int, startT
         }
         route("api") {
             authRoutes.register(this)
+            userRoutes.register(this)
+            productRoutes.register(this)
+            storeRoutes.register(this)
+            groupRoutes.register(this)
+            purchaseRoutes.register(this)
+            budgetRoutes.register(this)
+            ticketRoutes.register(this)
+            notificationRoutes.register(this)
+            statisticsRoutes.register(this)
+            offerRoutes.register(this)
         }
     }
 }

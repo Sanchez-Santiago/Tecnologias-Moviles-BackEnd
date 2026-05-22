@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "2.3.0"
-    kotlin("plugin.serialization") version "2.3.0"
+    kotlin("jvm") version "2.2.0"
+    kotlin("plugin.serialization") version "2.2.0"
     application
 }
 
@@ -21,7 +21,7 @@ repositories {
 
 val ktorVersion = "3.4.2"
 val exposedVersion = "1.0.0"
-val serializationVersion = "1.11.0"
+val serializationVersion = "1.8.0"
 val postgresVersion = "42.7.5"
 val logbackVersion = "1.5.16"
 val bcryptVersion = "0.10.2"
@@ -67,4 +67,15 @@ tasks.named<Jar>("jar") {
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
     workingDir = project.rootDir
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-stdlib:2.2.0")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.2.0")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.0")
+        force("org.jetbrains.kotlin:kotlin-reflect:2.2.0")
+        force("org.jetbrains.kotlin:kotlin-test:2.2.0")
+        force("org.jetbrains.kotlin:kotlin-stdlib-common:2.2.0")
+    }
 }

@@ -11,6 +11,7 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.contextual
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -29,6 +30,12 @@ private object LocalDateTimeSerializer : KSerializer<LocalDateTime> {
         LocalDateTime.parse(decoder.decodeString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME)
 }
 
+private object BigDecimalSerializer : KSerializer<BigDecimal> {
+    override val descriptor = PrimitiveSerialDescriptor("BigDecimal", PrimitiveKind.STRING)
+    override fun serialize(encoder: Encoder, value: BigDecimal) = encoder.encodeString(value.toPlainString())
+    override fun deserialize(decoder: Decoder): BigDecimal = BigDecimal(decoder.decodeString())
+}
+
 fun Application.configureSerialization() {
     install(ContentNegotiation) {
         json(Json {
@@ -38,6 +45,7 @@ fun Application.configureSerialization() {
             serializersModule = SerializersModule {
                 contextual(UUID::class, UUIDSerializer)
                 contextual(LocalDateTime::class, LocalDateTimeSerializer)
+                contextual(BigDecimal::class, BigDecimalSerializer)
             }
         })
     }

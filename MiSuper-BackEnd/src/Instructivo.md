@@ -1,6 +1,41 @@
 Perfecto.
 Entonces vamos a diseñar el backend de **SUPER AHORRO** como una aplicación monolítica moderna, modular y bien organizada, SIN microservicios, pero preparada para crecer sin romperse.
 
+---
+
+# 🚀 PROGRESO DEL BACKEND
+
+## ✅ Módulos Completados y Verificados (12/12)
+
+Todos los módulos han sido probados con datos reales y funcionan correctamente.
+
+| Módulo | Estado | Endpoints |
+|--------|--------|-----------|
+| Auth | ✅✅ | register, login, refresh, login history |
+| Users | ✅✅ | perfil, settings, cambio contraseña |
+| Categories | ✅✅ | CRUD categorías (admin), list público |
+| Products | ✅✅ | CRUD productos (admin), list, filtro por categoría |
+| Stores | ✅✅ | CRUD tiendas (admin), list |
+| Groups | ✅✅ | CRUD grupos, membresías con roles, agregar/quitar miembros |
+| Purchases | ✅✅ | compras con items, cálculo automático total, validación grupo/miembros |
+| Budgets | ✅✅ | presupuestos con categorías y montos, soft delete |
+| Tickets | ✅✅ | tickets con mensajes, estados y prioridades |
+| Notifications | ✅✅ | listar, marcar leídas, eliminar, conteo no leídas |
+| Offers | ✅✅ | CRUD ofertas con tipos de descuento, filtro por tienda, admin-only mutaciones |
+| Statistics | ✅✅ | gasto por categoría/tienda, resumen mensual, progreso presupuesto |
+
+## ❌ Pendientes de Implementar
+
+| Módulo/Feature | Prioridad |
+|----------------|-----------|
+| Swagger / OpenAPI | Baja |
+| Rate Limiting | Baja |
+| Docker | Baja |
+| Testing (unit + integration) | Media |
+| Cloudinary (subida de imágenes) | Baja |
+
+---
+
 La idea es construir un backend:
 
 ✔ limpio
@@ -285,53 +320,42 @@ backend/
 │
 ├── src/
 │
-├── auth/
-│   ├── routes/
-│   ├── services/
-│   ├── repositories/
-│   ├── dto/
-│   ├── models/
-│   └── validators/
-│
-├── users/
-├── groups/
-├── products/
-├── purchases/
-├── budgets/
-├── tickets/
-├── offers/
-├── notifications/
-├── statistics/
-├── stores/
+├── auth/                          ✅
+├── users/                         ✅
+├── groups/                        ✅
+├── products/                      ✅
+├── purchases/                     ✅
+├── budgets/                       ✅
+├── tickets/                       ✅
+├── offers/                        ✅
+├── notifications/                 ✅
+├── stores/                        ✅
+├── statistics/                    ✅
 │
 ├── database/
-│   ├── tables/
-│   ├── migrations/
-│   ├── DatabaseFactory.kt
-│   └── Transaction.kt
+│   ├── tables/                    ✅ (18 tablas)
+│   ├── migrations/                ❌ pendiente
+│   ├── DatabaseFactory.kt         ✅
+│   └── Transaction.kt             ❌ pendiente
 │
 ├── security/
-│   ├── JwtService.kt
-│   ├── PasswordHasher.kt
-│   ├── Authorization.kt
-│   └── TokenConfig.kt
+│   ├── JwtService.kt              ✅
+│   ├── PasswordHasher.kt          ✅
+│   ├── Authorization.kt           ❌ pendiente
+│   └── TokenConfig.kt             ✅
 │
 ├── plugins/
-│   ├── Routing.kt
-│   ├── Serialization.kt
-│   ├── Security.kt
-│   ├── Monitoring.kt
-│   └── StatusPages.kt
+│   ├── Routing.kt                 ✅
+│   ├── Serialization.kt           ✅
+│   ├── Security.kt                ✅
+│   ├── Monitoring.kt              ❌ pendiente
+│   └── StatusPages.kt             ✅
 │
-├── exceptions/
-│
-├── responses/
-│
-├── utils/
-│
-├── config/
-│
-└── Application.kt
+├── exceptions/                    ✅ (5 custom exceptions)
+├── responses/                     ✅ (ApiResponse)
+├── utils/                         ❌ pendiente
+├── config/                        ✅ (AppConfig)
+└── Application.kt                 ✅
 ```
 
 ---
@@ -576,53 +600,53 @@ NO meter toda la lógica en PostgreSQL.
 
 ---
 
-# USERS
+# USERS                      ✅
 
 ---
 
-# PASSWORD_HISTORY
+# PASSWORD_HISTORY          ✅
 
 Para historial de contraseñas.
 
 ---
 
-# GROUPS
+# GROUPS                    ✅
 
 Familiares / individuales / empresariales.
 
 ---
 
-# PURCHASES
+# PURCHASES                 ✅
 
 Compras principales.
 
 ---
 
-# PURCHASE_PRODUCTS
+# PURCHASE_PRODUCTS         ✅
 
 Detalle de productos.
 
 ---
 
-# BUDGETS
+# BUDGETS                   ✅
 
 Presupuestos grupales.
 
 ---
 
-# OFFERS
+# OFFERS                    ✅
 
 Promociones.
 
 ---
 
-# TICKETS
+# TICKETS                   ✅
 
-Tickets OCR futuros.
+Tickets de soporte/reclamos con mensajes.
 
 ---
 
-# NOTIFICATIONS
+# NOTIFICATIONS             ✅
 
 Sistema completo de notificaciones.
 
