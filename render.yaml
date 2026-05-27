@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: misuper-backend
+    runtime: docker
+    rootDir: MiSuper-BackEnd
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_USER
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      - key: DATABASE_MIGRATE_ON_START
+        value: true
+      - key: DATABASE_SEED_ON_START
+        value: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_ISSUER
+        value: misuper-backend
+      - key: JWT_AUDIENCE
+        value: misuper-app
+      - key: ACCESS_TOKEN_EXPIRY_MINUTES
+        value: 15
+      - key: REFRESH_TOKEN_EXPIRY_DAYS
+        value: 7
+      - key: PASSWORD_HASH_COST
+        value: 12
+      - key: PASSWORD_HISTORY_SIZE
+        value: 5
+      - key: CORS_ALLOWED_HOSTS
+        value: '["localhost:3000","localhost:5173"]'
