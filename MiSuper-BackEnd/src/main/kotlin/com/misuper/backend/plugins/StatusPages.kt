@@ -4,8 +4,10 @@ import com.misuper.backend.exceptions.*
 import com.misuper.backend.responses.ApiResponse
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
+import kotlinx.serialization.SerializationException
 
 fun Application.configureStatusPages() {
     install(StatusPages) {
@@ -41,6 +43,27 @@ fun Application.configureStatusPages() {
             call.respond(
                 HttpStatusCode.Conflict,
                 ApiResponse.error(message = cause.message, errorCode = "CONFLICT")
+            )
+        }
+
+        exception<BadRequestException> { call, cause ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ApiResponse.error(message = cause.message ?: "Solicitud inválida", errorCode = "BAD_REQUEST")
+            )
+        }
+
+        exception<IllegalArgumentException> { call, cause ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ApiResponse.error(message = cause.message ?: "Parámetros inválidos", errorCode = "BAD_REQUEST")
+            )
+        }
+
+        exception<SerializationException> { call, cause ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ApiResponse.error(message = "JSON inválido o incompleto", errorCode = "BAD_REQUEST")
             )
         }
 

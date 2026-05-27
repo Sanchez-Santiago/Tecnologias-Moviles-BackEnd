@@ -17,37 +17,13 @@ class ProductService(
     private val categoryRepository: CategoryRepository
 ) {
     fun getAll(categoryId: UUID? = null): List<ProductResponse> {
-        return productRepository.findAll(categoryId).map { row ->
-val categoryRow = categoryRepository.findById(row[ProductsTable.categoryId].value)
-            ProductResponse(
-                id = row[ProductsTable.id].value.toString(),
-                name = row[ProductsTable.name],
-                price = row[ProductsTable.price],
-                categoryId = row[ProductsTable.categoryId].value.toString(),
-                categoryName = categoryRow?.get(CategoriesTable.name) ?: "Sin categoría",
-                description = row[ProductsTable.description],
-                imageUrl = row[ProductsTable.imageUrl],
-                barcode = row[ProductsTable.barcode],
-                active = row[ProductsTable.active]
-            )
-        }
+        return productRepository.findAll(categoryId).map { row -> buildResponse(row) }
     }
 
     fun getById(id: UUID): ProductResponse {
         val row = productRepository.findById(id)
             ?: throw NotFoundException("Producto no encontrado")
-        val categoryRow = categoryRepository.findById(row[ProductsTable.categoryId].value)
-        return ProductResponse(
-            id = row[ProductsTable.id].value.toString(),
-            name = row[ProductsTable.name],
-            price = row[ProductsTable.price],
-            categoryId = row[ProductsTable.categoryId].value.toString(),
-            categoryName = categoryRow?.get(CategoriesTable.name) ?: "Sin categoría",
-            description = row[ProductsTable.description],
-            imageUrl = row[ProductsTable.imageUrl],
-            barcode = row[ProductsTable.barcode],
-            active = row[ProductsTable.active]
-        )
+        return buildResponse(row)
     }
 
     fun create(request: CreateProductRequest): ProductResponse {
@@ -63,7 +39,8 @@ val categoryRow = categoryRepository.findById(row[ProductsTable.categoryId].valu
             categoryIdVal = categoryId,
             descriptionVal = request.description,
             imageUrlVal = request.imageUrl,
-            barcodeVal = request.barcode
+            barcodeVal = request.barcode,
+            priorityVal = request.priority.uppercase()
         )
         return getById(id)
     }
@@ -87,7 +64,8 @@ val categoryRow = categoryRepository.findById(row[ProductsTable.categoryId].valu
             categoryIdVal = categoryId,
             descriptionVal = request.description,
             imageUrlVal = request.imageUrl,
-            barcodeVal = request.barcode
+            barcodeVal = request.barcode,
+            priorityVal = request.priority?.uppercase()
         )
         return getById(id)
     }
@@ -96,5 +74,21 @@ val categoryRow = categoryRepository.findById(row[ProductsTable.categoryId].valu
         productRepository.findById(id)
             ?: throw NotFoundException("Producto no encontrado")
         productRepository.softDelete(id)
+    }
+
+    private fun buildResponse(row: org.jetbrains.exposed.v1.core.ResultRow): ProductResponse {
+        val categoryRow = categoryRepository.findById(row[ProductsTable.categoryId].value)
+        return ProductResponse(
+            id = row[ProductsTable.id].value.toString(),
+            name = row[ProductsTable.name],
+            price = row[ProductsTable.price],
+            categoryId = row[ProductsTable.categoryId].value.toString(),
+            categoryName = categoryRow?.get(CategoriesTable.name) ?: "Sin categoría",
+            description = row[ProductsTable.description],
+            imageUrl = row[ProductsTable.imageUrl],
+            barcode = row[ProductsTable.barcode],
+            priority = row[ProductsTable.priority],
+            active = row[ProductsTable.active]
+        )
     }
 }

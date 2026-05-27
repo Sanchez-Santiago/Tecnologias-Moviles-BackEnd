@@ -46,3 +46,11 @@ data class OfferResponse(
     val termsConditions: String? = null,
     @Contextual val createdAt: LocalDateTime
 )
+
+@Serializable
+data class MatchedOfferResponse(
+    val productId: String,
+    val productName: String,
+    val offer: OfferResponse,
+    val reason: String
+)

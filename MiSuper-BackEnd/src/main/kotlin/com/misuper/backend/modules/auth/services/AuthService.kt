@@ -14,7 +14,8 @@ import java.time.LocalDateTime
 class AuthService(
     private val authRepository: AuthRepository,
     private val jwtService: JwtService,
-    private val passwordHasher: PasswordHasher
+    private val passwordHasher: PasswordHasher,
+    private val passwordHistorySize: Int
 ) {
     fun register(request: RegisterRequest, ipAddress: String?, userAgent: String?): AuthResponse {
         AuthValidator.validateRegisterRequest(request)

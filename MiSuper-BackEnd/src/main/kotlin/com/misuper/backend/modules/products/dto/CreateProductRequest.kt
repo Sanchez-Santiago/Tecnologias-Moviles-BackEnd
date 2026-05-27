@@ -9,5 +9,6 @@ data class CreateProductRequest(
     val categoryId: String,
     val description: String? = null,
     val imageUrl: String? = null,
-    val barcode: String? = null
+    val barcode: String? = null,
+    val priority: String = "SECUNDARIO"
 )

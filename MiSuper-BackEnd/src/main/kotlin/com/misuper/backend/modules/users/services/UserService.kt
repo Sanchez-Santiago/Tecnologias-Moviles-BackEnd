@@ -13,7 +13,8 @@ import java.util.UUID
 
 class UserService(
     private val userRepository: UserRepository,
-    private val passwordHasher: PasswordHasher
+    private val passwordHasher: PasswordHasher,
+    private val passwordHistorySize: Int
 ) {
     fun getProfile(userId: UUID): UserProfileResponse {
         val row = userRepository.findById(userId)
@@ -67,6 +68,12 @@ class UserService(
 
         if (!passwordHasher.verify(request.currentPassword, currentHash)) {
             throw AuthException("La contraseña actual es incorrecta")
+        }
+
+        val repeatedPassword = userRepository.getPasswordHistory(userId, passwordHistorySize)
+            .any { previousHash -> passwordHasher.verify(request.newPassword, previousHash) }
+        if (repeatedPassword) {
+            throw AuthException("No puedes reutilizar una de tus últimas $passwordHistorySize contraseñas")
         }
 
         val newHash = passwordHasher.hash(request.newPassword)

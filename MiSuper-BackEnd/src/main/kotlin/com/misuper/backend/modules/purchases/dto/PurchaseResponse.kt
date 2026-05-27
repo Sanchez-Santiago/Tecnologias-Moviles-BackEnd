@@ -29,3 +29,9 @@ data class PurchaseProductResponse(
     @Contextual val unitPrice: BigDecimal,
     @Contextual val subtotal: BigDecimal
 )
+
+@Serializable
+data class PurchaseShareResponse(
+    val purchaseId: String,
+    val text: String
+)

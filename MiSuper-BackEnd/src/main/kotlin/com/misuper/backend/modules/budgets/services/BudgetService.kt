@@ -9,6 +9,7 @@ import com.misuper.backend.modules.budgets.dto.BudgetItemResponse
 import com.misuper.backend.modules.budgets.dto.BudgetResponse
 import com.misuper.backend.modules.budgets.dto.CreateBudgetRequest
 import com.misuper.backend.modules.budgets.dto.UpdateBudgetRequest
+import com.misuper.backend.modules.budgets.repositories.BudgetItemInsert
 import com.misuper.backend.modules.budgets.repositories.BudgetRepository
 import com.misuper.backend.modules.budgets.validators.BudgetValidator
 import com.misuper.backend.modules.groups.repositories.GroupRepository
@@ -60,25 +61,25 @@ class BudgetService(
             LocalDateTime.parse(it, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         }
 
-        val budgetId = budgetRepository.create(
+        val items = request.items.map { item ->
+            val categoryId = UUID.fromString(item.categoryId)
+            budgetRepository.findCategoryById(categoryId)
+                ?: throw NotFoundException("Categoría no encontrada: ${item.categoryId}")
+            BudgetItemInsert(
+                categoryId = categoryId,
+                amount = BigDecimal.valueOf(item.amount)
+            )
+        }
+
+        val budgetId = budgetRepository.createWithItems(
             groupIdVal = groupId,
             nameVal = request.name,
             totalAmountVal = BigDecimal.valueOf(request.totalAmount),
             periodVal = request.period.uppercase(),
             startDateVal = startDate,
-            endDateVal = endDate
+            endDateVal = endDate,
+            items = items
         )
-
-        request.items.forEach { item ->
-            val categoryId = UUID.fromString(item.categoryId)
-            val categoryRow = budgetRepository.findCategoryById(categoryId)
-                ?: throw NotFoundException("Categoría no encontrada: ${item.categoryId}")
-            budgetRepository.addItem(
-                budgetIdVal = budgetId,
-                categoryIdVal = categoryId,
-                amountVal = BigDecimal.valueOf(item.amount)
-            )
-        }
 
         return getById(budgetId, userId)
     }
@@ -100,28 +101,25 @@ class BudgetService(
             LocalDateTime.parse(it, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         }
 
-        budgetRepository.update(
+        val items = request.items?.map { item ->
+            val categoryId = UUID.fromString(item.categoryId)
+            budgetRepository.findCategoryById(categoryId)
+                ?: throw NotFoundException("Categoría no encontrada: ${item.categoryId}")
+            BudgetItemInsert(
+                categoryId = categoryId,
+                amount = BigDecimal.valueOf(item.amount)
+            )
+        }
+
+        budgetRepository.updateWithItems(
             id = id,
             nameVal = request.name,
             totalAmountVal = request.totalAmount?.let { BigDecimal.valueOf(it) },
             periodVal = request.period?.uppercase(),
             startDateVal = startDate,
-            endDateVal = endDate
+            endDateVal = endDate,
+            items = items
         )
-
-        if (request.items != null) {
-            budgetRepository.deleteItems(id)
-            request.items.forEach { item ->
-                val categoryId = UUID.fromString(item.categoryId)
-                val categoryRow = budgetRepository.findCategoryById(categoryId)
-                    ?: throw NotFoundException("Categoría no encontrada: ${item.categoryId}")
-                budgetRepository.addItem(
-                    budgetIdVal = id,
-                    categoryIdVal = categoryId,
-                    amountVal = BigDecimal.valueOf(item.amount)
-                )
-            }
-        }
 
         return getById(id, userId)
     }

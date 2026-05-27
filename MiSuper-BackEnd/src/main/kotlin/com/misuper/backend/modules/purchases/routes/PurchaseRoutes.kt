@@ -34,6 +34,13 @@ class PurchaseRoutes(private val purchaseService: PurchaseService) {
                     call.respond(HttpStatusCode.OK, ApiResponse.success(purchase))
                 }
 
+                get("{id}/share") {
+                    val userId = userId(call)
+                    val purchaseId = UUID.fromString(call.parameters["id"])
+                    val share = purchaseService.getShareText(purchaseId, userId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(share))
+                }
+
                 post {
                     val userId = userId(call)
                     val request = call.receive<CreatePurchaseRequest>()

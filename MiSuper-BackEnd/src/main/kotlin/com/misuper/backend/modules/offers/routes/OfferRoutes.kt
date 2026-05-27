@@ -26,6 +26,22 @@ class OfferRoutes(private val offerService: OfferService) {
                     call.respond(HttpStatusCode.OK, ApiResponse.success(offers))
                 }
 
+                get("active") {
+                    val storeId = call.request.queryParameters["storeId"]
+                    val offers = offerService.getActive(storeId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(offers))
+                }
+
+                get("match") {
+                    val productIds = call.request.queryParameters.getAll("productId").orEmpty()
+                    if (productIds.isEmpty()) {
+                        throw IllegalArgumentException("Debe indicar al menos un productId")
+                    }
+                    val storeId = call.request.queryParameters["storeId"]
+                    val matches = offerService.matchProducts(productIds, storeId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(matches))
+                }
+
                 get("{id}") {
                     val offerId = UUID.fromString(call.parameters["id"])
                     val offer = offerService.getById(offerId)

@@ -1,13 +1,16 @@
 package com.misuper.backend.modules.offers.services
 
 import com.misuper.backend.database.tables.OffersTable
+import com.misuper.backend.database.tables.ProductsTable
 import com.misuper.backend.database.tables.StoresTable
 import com.misuper.backend.exceptions.NotFoundException
 import com.misuper.backend.modules.offers.dto.CreateOfferRequest
+import com.misuper.backend.modules.offers.dto.MatchedOfferResponse
 import com.misuper.backend.modules.offers.dto.OfferResponse
 import com.misuper.backend.modules.offers.dto.UpdateOfferRequest
 import com.misuper.backend.modules.offers.repositories.OfferRepository
 import com.misuper.backend.modules.offers.validators.OfferValidator
+import com.misuper.backend.modules.products.repositories.ProductRepository
 import com.misuper.backend.modules.stores.repositories.StoreRepository
 import org.jetbrains.exposed.v1.core.ResultRow
 import java.math.BigDecimal
@@ -17,7 +20,8 @@ import java.util.UUID
 
 class OfferService(
     private val offerRepository: OfferRepository,
-    private val storeRepository: StoreRepository
+    private val storeRepository: StoreRepository,
+    private val productRepository: ProductRepository
 ) {
     fun getAll(storeId: String? = null): List<OfferResponse> {
         val storeIdVal = storeId?.let { UUID.fromString(it) }
@@ -28,6 +32,48 @@ class OfferService(
         val row = offerRepository.findById(id)
             ?: throw NotFoundException("Oferta no encontrada")
         return buildResponse(row)
+    }
+
+    fun getActive(storeId: String? = null): List<OfferResponse> {
+        val storeIdVal = storeId?.let { UUID.fromString(it) }
+        return offerRepository.findActiveAt(LocalDateTime.now(), storeIdVal).map { row -> buildResponse(row) }
+    }
+
+    fun matchProducts(productIds: List<String>, storeId: String? = null): List<MatchedOfferResponse> {
+        val ids = productIds.map { UUID.fromString(it) }
+        val storeIdVal = storeId?.let { UUID.fromString(it) }
+        val offers = offerRepository.findActiveAt(LocalDateTime.now(), storeIdVal)
+
+        return ids.flatMap { productId ->
+            val product = productRepository.findById(productId)
+                ?: throw NotFoundException("Producto no encontrado: $productId")
+            val name = product[ProductsTable.name]
+            val normalizedName = name.lowercase()
+
+            offers.mapNotNull { offer ->
+                val haystack = listOfNotNull(
+                    offer[OffersTable.title],
+                    offer[OffersTable.description],
+                    offer[OffersTable.termsConditions]
+                ).joinToString(" ").lowercase()
+
+                val isDirectMatch = normalizedName.split(" ")
+                    .filter { it.length >= 4 }
+                    .any { word -> haystack.contains(word) }
+
+                val isGlobalOffer = offer[OffersTable.storeId] == null
+                if (isDirectMatch || isGlobalOffer) {
+                    MatchedOfferResponse(
+                        productId = productId.toString(),
+                        productName = name,
+                        offer = buildResponse(offer),
+                        reason = if (isDirectMatch) "Coincide con el producto" else "Oferta general activa"
+                    )
+                } else {
+                    null
+                }
+            }
+        }
     }
 
     fun create(request: CreateOfferRequest): OfferResponse {

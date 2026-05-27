@@ -10,6 +10,7 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -54,6 +55,35 @@ class BudgetRepository {
         }[BudgetsTable.id].value
     }
 
+    fun createWithItems(
+        groupIdVal: UUID,
+        nameVal: String,
+        totalAmountVal: BigDecimal,
+        periodVal: String,
+        startDateVal: LocalDateTime,
+        endDateVal: LocalDateTime?,
+        items: List<BudgetItemInsert>
+    ): UUID = transaction(db) {
+        val budgetId = BudgetsTable.insert { stmt ->
+            stmt[BudgetsTable.groupId] = EntityID(groupIdVal, GroupsTable)
+            stmt[BudgetsTable.name] = nameVal
+            stmt[BudgetsTable.totalAmount] = totalAmountVal
+            stmt[BudgetsTable.period] = periodVal
+            stmt[BudgetsTable.startDate] = startDateVal
+            stmt[BudgetsTable.endDate] = endDateVal
+        }[BudgetsTable.id].value
+
+        items.forEach { item ->
+            BudgetItemsTable.insert { stmt ->
+                stmt[BudgetItemsTable.budgetId] = EntityID(budgetId, BudgetsTable)
+                stmt[BudgetItemsTable.categoryId] = EntityID(item.categoryId, CategoriesTable)
+                stmt[BudgetItemsTable.amount] = item.amount
+            }
+        }
+
+        budgetId
+    }
+
     fun update(
         id: UUID,
         nameVal: String?,
@@ -69,6 +99,38 @@ class BudgetRepository {
             startDateVal?.let { stmt[BudgetsTable.startDate] = it }
             if (endDateVal != null) stmt[BudgetsTable.endDate] = endDateVal
             stmt[BudgetsTable.updatedAt] = LocalDateTime.now()
+        }
+    }
+
+    fun updateWithItems(
+        id: UUID,
+        nameVal: String?,
+        totalAmountVal: BigDecimal?,
+        periodVal: String?,
+        startDateVal: LocalDateTime?,
+        endDateVal: LocalDateTime?,
+        items: List<BudgetItemInsert>?
+    ) = transaction(db) {
+        BudgetsTable.update({ BudgetsTable.id eq id }) { stmt ->
+            nameVal?.let { stmt[BudgetsTable.name] = it }
+            totalAmountVal?.let { stmt[BudgetsTable.totalAmount] = it }
+            periodVal?.let { stmt[BudgetsTable.period] = it }
+            startDateVal?.let { stmt[BudgetsTable.startDate] = it }
+            if (endDateVal != null) stmt[BudgetsTable.endDate] = endDateVal
+            stmt[BudgetsTable.updatedAt] = LocalDateTime.now()
+        }
+
+        if (items != null) {
+            BudgetItemsTable.deleteWhere {
+                budgetId eq EntityID(id, BudgetsTable)
+            }
+            items.forEach { item ->
+                BudgetItemsTable.insert { stmt ->
+                    stmt[BudgetItemsTable.budgetId] = EntityID(id, BudgetsTable)
+                    stmt[BudgetItemsTable.categoryId] = EntityID(item.categoryId, CategoriesTable)
+                    stmt[BudgetItemsTable.amount] = item.amount
+                }
+            }
         }
     }
 
@@ -101,10 +163,17 @@ class BudgetRepository {
     }
 
     fun deleteItems(budgetIdVal: UUID) = transaction(db) {
-        exec("DELETE FROM budget_items WHERE budget_id = '$budgetIdVal'")
+        BudgetItemsTable.deleteWhere {
+            budgetId eq EntityID(budgetIdVal, BudgetsTable)
+        }
     }
 
     fun findCategoryById(id: UUID): ResultRow? = transaction(db) {
         CategoriesTable.selectAll().where { CategoriesTable.id eq id }.singleOrNull()
     }
 }
+
+data class BudgetItemInsert(
+    val categoryId: UUID,
+    val amount: BigDecimal
+)

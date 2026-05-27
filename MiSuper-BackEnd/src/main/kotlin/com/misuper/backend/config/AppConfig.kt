@@ -7,7 +7,9 @@ data class DatabaseConfig(
     val user: String,
     val password: String,
     val driver: String,
-    val maxPoolSize: Int
+    val maxPoolSize: Int,
+    val migrateOnStart: Boolean,
+    val seedOnStart: Boolean
 )
 
 data class JwtConfig(
@@ -25,27 +27,33 @@ data class PasswordConfig(
 
 data class AppConfig(
     val serverPort: Int,
+    val serverHost: String,
     val database: DatabaseConfig,
     val jwt: JwtConfig,
-    val password: PasswordConfig
+    val password: PasswordConfig,
+    val corsAllowedHosts: List<String>
 ) {
     companion object {
         fun load(): AppConfig {
             val config = ConfigFactory.load().resolve()
 
             val serverPort = config.getInt("server.port")
+            val serverHost = config.getString("server.host")
             val db = config.getConfig("database")
             val jwt = config.getConfig("jwt")
             val pwd = config.getConfig("password")
 
             return AppConfig(
                 serverPort = serverPort,
+                serverHost = serverHost,
                 database = DatabaseConfig(
                     url = db.getString("url"),
                     user = db.getString("user"),
                     password = db.getString("password"),
                     driver = db.getString("driver"),
-                    maxPoolSize = db.getInt("maxPoolSize")
+                    maxPoolSize = db.getInt("maxPoolSize"),
+                    migrateOnStart = db.getBoolean("migrateOnStart"),
+                    seedOnStart = db.getBoolean("seedOnStart")
                 ),
                 jwt = JwtConfig(
                     secret = jwt.getString("secret"),
@@ -57,7 +65,8 @@ data class AppConfig(
                 password = PasswordConfig(
                     hashCost = pwd.getInt("hashCost"),
                     historySize = pwd.getInt("historySize")
-                )
+                ),
+                corsAllowedHosts = config.getStringList("cors.allowedHosts")
             )
         }
     }

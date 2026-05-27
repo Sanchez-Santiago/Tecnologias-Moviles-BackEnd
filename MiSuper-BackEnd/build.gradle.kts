@@ -27,6 +27,7 @@ val logbackVersion = "1.5.16"
 val bcryptVersion = "0.10.2"
 val hoconVersion = "1.4.3"
 val hikariVersion = "6.3.0"
+val flywayVersion = "10.20.1"
 
 dependencies {
     implementation("io.ktor:ktor-server-core:$ktorVersion")
@@ -37,6 +38,8 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jwt:$ktorVersion")
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-server-call-logging:$ktorVersion")
+    implementation("io.ktor:ktor-server-cors:$ktorVersion")
+    implementation("io.ktor:ktor-server-rate-limit:$ktorVersion")
 
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
@@ -47,6 +50,8 @@ dependencies {
 
     implementation("org.postgresql:postgresql:$postgresVersion")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
+    implementation("org.flywaydb:flyway-core:$flywayVersion")
+    implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
 
     implementation("at.favre.lib:bcrypt:$bcryptVersion")
 
@@ -57,6 +62,7 @@ dependencies {
 
 
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
+    testImplementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
     testImplementation(kotlin("test"))
 }
 

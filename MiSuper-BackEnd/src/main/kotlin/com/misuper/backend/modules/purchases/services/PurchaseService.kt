@@ -8,6 +8,8 @@ import com.misuper.backend.modules.products.repositories.ProductRepository
 import com.misuper.backend.modules.purchases.dto.CreatePurchaseRequest
 import com.misuper.backend.modules.purchases.dto.PurchaseProductResponse
 import com.misuper.backend.modules.purchases.dto.PurchaseResponse
+import com.misuper.backend.modules.purchases.dto.PurchaseShareResponse
+import com.misuper.backend.modules.purchases.repositories.PurchaseItemInsert
 import com.misuper.backend.modules.purchases.repositories.PurchaseRepository
 import com.misuper.backend.modules.purchases.validators.PurchaseValidator
 import com.misuper.backend.modules.stores.repositories.StoreRepository
@@ -72,7 +74,7 @@ class PurchaseService(
             val subtotal = unitPrice * quantity
             total += subtotal
 
-            PurchaseItemData(
+            PurchaseItemInsert(
                 productId = productId,
                 productName = productRow[ProductsTable.name],
                 quantity = item.quantity,
@@ -81,26 +83,30 @@ class PurchaseService(
             )
         }
 
-        val purchaseId = purchaseRepository.create(
+        val purchaseId = purchaseRepository.createWithItems(
             groupIdVal = groupId,
             storeIdVal = storeId,
             userIdVal = userId,
             totalVal = total,
-            notesVal = request.notes
+            notesVal = request.notes,
+            items = items
         )
 
-        items.forEach { item ->
-            purchaseRepository.addItem(
-                purchaseIdVal = purchaseId,
-                productIdVal = item.productId,
-                productNameVal = item.productName,
-                quantityVal = item.quantity,
-                unitPriceVal = item.unitPrice,
-                subtotalVal = item.subtotal
-            )
-        }
-
         return getById(purchaseId, userId)
+    }
+
+    fun getShareText(purchaseId: UUID, userId: UUID): PurchaseShareResponse {
+        val purchase = getById(purchaseId, userId)
+        val lines = buildList {
+            add("Compra en ${purchase.storeName ?: "supermercado"}")
+            add("Total: $${purchase.total}")
+            add("Productos:")
+            purchase.items.forEach { item ->
+                add("- ${item.productName} x${item.quantity}: $${item.subtotal}")
+            }
+            purchase.notes?.takeIf { it.isNotBlank() }?.let { add("Notas: $it") }
+        }
+        return PurchaseShareResponse(purchaseId = purchase.id, text = lines.joinToString("\n"))
     }
 
     private fun buildResponse(row: ResultRow): PurchaseResponse {
@@ -141,11 +147,4 @@ class PurchaseService(
         )
     }
 
-    private data class PurchaseItemData(
-        val productId: UUID,
-        val productName: String,
-        val quantity: Int,
-        val unitPrice: BigDecimal,
-        val subtotal: BigDecimal
-    )
 }

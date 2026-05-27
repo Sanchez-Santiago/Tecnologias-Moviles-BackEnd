@@ -44,7 +44,8 @@ class ProductRepository {
         categoryIdVal: UUID,
         descriptionVal: String?,
         imageUrlVal: String?,
-        barcodeVal: String?
+        barcodeVal: String?,
+        priorityVal: String
     ): UUID = transaction(db) {
         ProductsTable.insert {
             it[name] = nameVal
@@ -53,6 +54,7 @@ class ProductRepository {
             it[description] = descriptionVal
             it[imageUrl] = imageUrlVal
             it[barcode] = barcodeVal
+            it[priority] = priorityVal
         }[ProductsTable.id].value
     }
 
@@ -63,7 +65,8 @@ class ProductRepository {
         categoryIdVal: UUID?,
         descriptionVal: String?,
         imageUrlVal: String?,
-        barcodeVal: String?
+        barcodeVal: String?,
+        priorityVal: String?
     ) = transaction(db) {
         ProductsTable.update({ ProductsTable.id eq id }) { stmt ->
             nameVal?.let { stmt[name] = it }
@@ -72,6 +75,7 @@ class ProductRepository {
             descriptionVal?.let { stmt[description] = it }
             imageUrlVal?.let { stmt[imageUrl] = it }
             barcodeVal?.let { stmt[barcode] = it }
+            priorityVal?.let { stmt[priority] = it }
             stmt[updatedAt] = LocalDateTime.now()
         }
     }

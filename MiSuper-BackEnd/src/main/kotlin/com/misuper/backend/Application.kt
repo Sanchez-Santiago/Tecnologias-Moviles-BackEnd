@@ -30,6 +30,9 @@ import com.misuper.backend.modules.statistics.services.StatisticsService
 import com.misuper.backend.modules.tickets.repositories.TicketRepository
 import com.misuper.backend.modules.tickets.routes.TicketRoutes
 import com.misuper.backend.modules.tickets.services.TicketService
+import com.misuper.backend.modules.transactions.repositories.FinancialTransactionRepository
+import com.misuper.backend.modules.transactions.routes.FinancialTransactionRoutes
+import com.misuper.backend.modules.transactions.services.FinancialTransactionService
 import com.misuper.backend.modules.purchases.routes.PurchaseRoutes
 import com.misuper.backend.modules.purchases.services.PurchaseService
 import com.misuper.backend.modules.stores.repositories.StoreRepository
@@ -49,7 +52,24 @@ import java.io.File
 import java.nio.file.Paths
 
 private fun loadEnv() {
-    val keys = listOf("DATABASE_URL", "DATABASE_USER", "DATABASE_PASSWORD", "JWT_SECRET")
+    val keys = listOf(
+        "PORT",
+        "HOST",
+        "DATABASE_URL",
+        "DATABASE_USER",
+        "DATABASE_PASSWORD",
+        "DATABASE_MAX_POOL_SIZE",
+        "DATABASE_MIGRATE_ON_START",
+        "DATABASE_SEED_ON_START",
+        "JWT_SECRET",
+        "JWT_ISSUER",
+        "JWT_AUDIENCE",
+        "ACCESS_TOKEN_EXPIRY_MINUTES",
+        "REFRESH_TOKEN_EXPIRY_DAYS",
+        "PASSWORD_HASH_COST",
+        "PASSWORD_HISTORY_SIZE",
+        "CORS_ALLOWED_HOSTS"
+    )
 
     val startDir = File(System.getProperty("user.dir") ?: ".")
     val searchDirs = mutableListOf(startDir)
@@ -123,11 +143,11 @@ fun main() {
     val jwtService = JwtService(tokenConfig)
     val passwordHasher = PasswordHasher(appConfig.password.hashCost)
     val authRepository = AuthRepository()
-    val authService = AuthService(authRepository, jwtService, passwordHasher)
+    val authService = AuthService(authRepository, jwtService, passwordHasher, appConfig.password.historySize)
     val authRoutes = AuthRoutes(authService)
 
     val userRepository = UserRepository()
-    val userService = UserService(userRepository, passwordHasher)
+    val userService = UserService(userRepository, passwordHasher, appConfig.password.historySize)
     val userRoutes = UserRoutes(userService)
 
     val categoryRepository = CategoryRepository()
@@ -171,14 +191,20 @@ fun main() {
     val statisticsRoutes = StatisticsRoutes(statisticsService)
 
     val offerRepository = OfferRepository()
-    val offerService = OfferService(offerRepository, storeRepository)
+    val offerService = OfferService(offerRepository, storeRepository, productRepository)
     val offerRoutes = OfferRoutes(offerService)
 
+    val financialTransactionRepository = FinancialTransactionRepository()
+    val financialTransactionService = FinancialTransactionService(financialTransactionRepository, groupRepository)
+    val financialTransactionRoutes = FinancialTransactionRoutes(financialTransactionService)
+
     embeddedServer(Netty, port = appConfig.serverPort) {
+        configureCors(appConfig.corsAllowedHosts)
         configureSerialization()
         configureStatusPages()
+        configureRateLimiting()
         configureSecurity(jwtService)
-        configureRouting(authRoutes, userRoutes, productRoutes, storeRoutes, groupRoutes, purchaseRoutes, budgetRoutes, ticketRoutes, notificationRoutes, statisticsRoutes, offerRoutes, appConfig.serverPort, startTime)
+        configureRouting(authRoutes, userRoutes, productRoutes, storeRoutes, groupRoutes, purchaseRoutes, budgetRoutes, ticketRoutes, notificationRoutes, statisticsRoutes, offerRoutes, financialTransactionRoutes, appConfig.serverPort, startTime)
 
         monitor.subscribe(ApplicationStarted) {
             val url = "http://localhost:${appConfig.serverPort}"

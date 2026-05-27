@@ -42,9 +42,18 @@ class AuthRepository {
 
     private fun createPasswordHistory(userIdVal: UUID, passwordHashVal: String) = transaction(db) {
         PasswordHistoryTable.insert {
+            it[userId] = EntityID(userIdVal, UsersTable)
             it[this.passwordHash] = passwordHashVal
             it[active] = true
         }
+    }
+
+    fun getPasswordHistory(userIdVal: UUID, limit: Int): List<String> = transaction(db) {
+        PasswordHistoryTable.selectAll()
+            .where { (PasswordHistoryTable.userId eq EntityID(userIdVal, UsersTable)) and (PasswordHistoryTable.active eq true) }
+            .orderBy(PasswordHistoryTable.createdAt, org.jetbrains.exposed.v1.core.SortOrder.DESC)
+            .limit(limit)
+            .map { it[PasswordHistoryTable.passwordHash] }
     }
 
     fun getPasswordHash(userIdVal: UUID): String? = transaction(db) {

@@ -54,6 +54,38 @@ class PurchaseRepository {
         }[PurchasesTable.id].value
     }
 
+    fun createWithItems(
+        groupIdVal: UUID,
+        storeIdVal: UUID?,
+        userIdVal: UUID,
+        totalVal: BigDecimal,
+        notesVal: String?,
+        items: List<PurchaseItemInsert>
+    ): UUID = transaction(db) {
+        val purchaseId = PurchasesTable.insert { stmt ->
+            stmt[PurchasesTable.groupId] = EntityID(groupIdVal, GroupsTable)
+            if (storeIdVal != null) {
+                stmt[PurchasesTable.storeId] = EntityID(storeIdVal, StoresTable)
+            }
+            stmt[PurchasesTable.userId] = EntityID(userIdVal, UsersTable)
+            stmt[PurchasesTable.total] = totalVal
+            stmt[PurchasesTable.notes] = notesVal
+        }[PurchasesTable.id].value
+
+        items.forEach { item ->
+            PurchaseProductsTable.insert { stmt ->
+                stmt[PurchaseProductsTable.purchaseId] = EntityID(purchaseId, PurchasesTable)
+                stmt[PurchaseProductsTable.productId] = EntityID(item.productId, ProductsTable)
+                stmt[PurchaseProductsTable.productName] = item.productName
+                stmt[PurchaseProductsTable.quantity] = item.quantity
+                stmt[PurchaseProductsTable.unitPrice] = item.unitPrice
+                stmt[PurchaseProductsTable.subtotal] = item.subtotal
+            }
+        }
+
+        purchaseId
+    }
+
     fun getItems(purchaseIdVal: UUID): List<ResultRow> = transaction(db) {
         PurchaseProductsTable.selectAll()
             .where { PurchaseProductsTable.purchaseId eq EntityID(purchaseIdVal, PurchasesTable) }
@@ -78,3 +110,11 @@ class PurchaseRepository {
         }
     }
 }
+
+data class PurchaseItemInsert(
+    val productId: UUID,
+    val productName: String,
+    val quantity: Int,
+    val unitPrice: BigDecimal,
+    val subtotal: BigDecimal
+)

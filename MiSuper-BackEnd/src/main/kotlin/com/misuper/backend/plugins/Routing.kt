@@ -1,6 +1,7 @@
 package com.misuper.backend.plugins
 
 import com.misuper.backend.database.DatabaseFactory
+import com.misuper.backend.exceptions.NotFoundException
 import com.misuper.backend.modules.auth.routes.AuthRoutes
 import com.misuper.backend.modules.budgets.routes.BudgetRoutes
 import com.misuper.backend.modules.groups.routes.GroupRoutes
@@ -8,6 +9,7 @@ import com.misuper.backend.modules.notifications.routes.NotificationRoutes
 import com.misuper.backend.modules.offers.routes.OfferRoutes
 import com.misuper.backend.modules.statistics.routes.StatisticsRoutes
 import com.misuper.backend.modules.tickets.routes.TicketRoutes
+import com.misuper.backend.modules.transactions.routes.FinancialTransactionRoutes
 import com.misuper.backend.modules.products.routes.ProductRoutes
 import com.misuper.backend.modules.purchases.routes.PurchaseRoutes
 import com.misuper.backend.modules.stores.routes.StoreRoutes
@@ -15,6 +17,7 @@ import com.misuper.backend.modules.users.routes.UserRoutes
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import java.time.Instant
 
@@ -52,6 +55,7 @@ fun Application.configureRouting(
     notificationRoutes: NotificationRoutes,
     statisticsRoutes: StatisticsRoutes,
     offerRoutes: OfferRoutes,
+    financialTransactionRoutes: FinancialTransactionRoutes,
     serverPort: Int,
     startTime: Long
 ) {
@@ -71,6 +75,11 @@ fun Application.configureRouting(
                 )
             )
         }
+        get("/openapi.yaml") {
+            val content = this::class.java.classLoader.getResource("openapi.yaml")?.readText()
+                ?: throw NotFoundException("OpenAPI no encontrado")
+            call.respondText(content, ContentType.Text.Plain)
+        }
         route("api") {
             authRoutes.register(this)
             userRoutes.register(this)
@@ -83,6 +92,7 @@ fun Application.configureRouting(
             notificationRoutes.register(this)
             statisticsRoutes.register(this)
             offerRoutes.register(this)
+            financialTransactionRoutes.register(this)
         }
     }
 }

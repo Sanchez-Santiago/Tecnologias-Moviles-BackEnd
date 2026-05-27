@@ -23,6 +23,7 @@ object ProductValidator {
         } catch (e: IllegalArgumentException) {
             throw ValidationException("ID de categoría inválido")
         }
+        validatePriority(request.priority)
     }
 
     fun validateUpdateProduct(request: UpdateProductRequest) {
@@ -36,11 +37,19 @@ object ProductValidator {
         request.price?.let {
             if (it <= 0) throw ValidationException("El precio debe ser mayor a cero")
         }
+        request.priority?.let { validatePriority(it) }
     }
 
     fun validateCreateCategory(request: CreateCategoryRequest) {
         if (request.name.isBlank()) {
             throw ValidationException("El nombre de la categoría es obligatorio")
+        }
+    }
+
+    private fun validatePriority(priority: String) {
+        val allowed = setOf("ESENCIAL", "PRIMARIO", "SECUNDARIO")
+        if (priority.uppercase() !in allowed) {
+            throw ValidationException("La prioridad debe ser ESENCIAL, PRIMARIO o SECUNDARIO")
         }
     }
 }

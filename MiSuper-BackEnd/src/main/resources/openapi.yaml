@@ -1,0 +1,141 @@
+openapi: 3.0.3
+info:
+  title: MiSuper / Super Ahorro API
+  version: 1.1.0
+  description: API backend para auth, productos, supermercados, compras, ofertas, presupuestos, tickets, notificaciones y estadísticas.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+paths:
+  /:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: Estado del servidor y base de datos
+  /api/auth/register:
+    post:
+      summary: Registrar usuario
+      security: []
+      responses:
+        "201":
+          description: Usuario registrado con tokens
+  /api/auth/login:
+    post:
+      summary: Iniciar sesión
+      security: []
+      responses:
+        "200":
+          description: Login correcto con access y refresh token
+  /api/auth/refresh:
+    post:
+      summary: Renovar access token
+      security: []
+      responses:
+        "200":
+          description: Nuevos tokens
+  /api/products:
+    get:
+      summary: Listar productos
+      responses:
+        "200":
+          description: Productos activos
+    post:
+      summary: Crear producto global
+      responses:
+        "201":
+          description: Producto creado
+  /api/stores:
+    get:
+      summary: Listar supermercados
+      responses:
+        "200":
+          description: Supermercados activos
+  /api/offers/active:
+    get:
+      summary: Listar promociones activas
+      responses:
+        "200":
+          description: Ofertas vigentes
+  /api/offers/match:
+    get:
+      summary: Matchear productos con ofertas activas
+      parameters:
+        - name: productId
+          in: query
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+      responses:
+        "200":
+          description: Ofertas sugeridas para productos
+  /api/purchases:
+    get:
+      summary: Listar compras por grupo
+      parameters:
+        - name: groupId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Compras del grupo
+    post:
+      summary: Registrar compra con productos
+      responses:
+        "201":
+          description: Compra creada
+  /api/purchases/{id}/share:
+    get:
+      summary: Obtener texto para compartir compra por Intent desde Android
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Texto listo para Intent ACTION_SEND
+  /api/transactions:
+    get:
+      summary: Listar ingresos y egresos del grupo
+      parameters:
+        - name: groupId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Movimientos financieros del grupo
+    post:
+      summary: Registrar ingreso o egreso
+      responses:
+        "201":
+          description: Movimiento creado
+  /api/transactions/summary:
+    get:
+      summary: Resumen financiero del grupo
+      parameters:
+        - name: groupId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Totales de ingresos, egresos y balance
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

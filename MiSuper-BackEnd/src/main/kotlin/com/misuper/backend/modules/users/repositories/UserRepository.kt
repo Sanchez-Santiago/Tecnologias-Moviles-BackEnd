@@ -44,10 +44,19 @@ class UserRepository {
             it[updatedAt] = LocalDateTime.now()
         }
         PasswordHistoryTable.insert {
+            it[this.userId] = EntityID(userId, UsersTable)
             it[passwordHash] = newPasswordHash
             it[active] = true
             it[createdAt] = LocalDateTime.now()
         }
+    }
+
+    fun getPasswordHistory(userId: UUID, limit: Int): List<String> = transaction(db) {
+        PasswordHistoryTable.selectAll()
+            .where { PasswordHistoryTable.userId eq EntityID(userId, UsersTable) }
+            .orderBy(PasswordHistoryTable.createdAt, org.jetbrains.exposed.v1.core.SortOrder.DESC)
+            .limit(limit)
+            .map { it[PasswordHistoryTable.passwordHash] }
     }
 
     fun getPasswordHash(userId: UUID): String? = transaction(db) {

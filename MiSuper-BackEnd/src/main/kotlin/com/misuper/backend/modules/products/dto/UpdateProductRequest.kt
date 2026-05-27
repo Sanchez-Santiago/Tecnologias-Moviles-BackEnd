@@ -9,5 +9,6 @@ data class UpdateProductRequest(
     val categoryId: String? = null,
     val description: String? = null,
     val imageUrl: String? = null,
-    val barcode: String? = null
+    val barcode: String? = null,
+    val priority: String? = null
 )

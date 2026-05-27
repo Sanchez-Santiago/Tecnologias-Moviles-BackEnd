@@ -19,11 +19,11 @@ import com.misuper.backend.database.tables.RefreshTokensTable
 import com.misuper.backend.database.tables.StoresTable
 import com.misuper.backend.database.tables.UserSettingsTable
 import com.misuper.backend.database.tables.UsersTable
+import com.misuper.backend.database.tables.FinancialTransactionsTable
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.SchemaUtils
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import javax.sql.DataSource
 
 object DatabaseFactory {
@@ -31,6 +31,15 @@ object DatabaseFactory {
     private var database: Database? = null
 
     fun init(config: DatabaseConfig) {
+        if (config.migrateOnStart) {
+            Flyway.configure()
+                .dataSource(config.url, config.user, config.password)
+                .baselineOnMigrate(true)
+                .baselineVersion("0")
+                .load()
+                .migrate()
+        }
+
         val hikariConfig = HikariConfig().apply {
             jdbcUrl = config.url
             username = config.user
@@ -48,26 +57,8 @@ object DatabaseFactory {
 
         database = Database.connect(hikariDS)
 
-        transaction(database!!) {
-            SchemaUtils.create(
-                UsersTable,                PasswordHistoryTable,
-                RefreshTokensTable,
-                LoginHistoryTable,
-                UserSettingsTable,
-                CategoriesTable,
-                ProductsTable,
-                StoresTable,
-                GroupsTable,
-                GroupMembersTable,
-                PurchasesTable,
-                PurchaseProductsTable,
-                BudgetsTable,
-                BudgetItemsTable,
-                TicketsTable,
-                TicketMessagesTable,
-                NotificationsTable,
-                OffersTable
-            )
+        if (config.seedOnStart) {
+            DatabaseSeeder.seed(database!!)
         }
     }
 

@@ -61,7 +61,12 @@ class NotificationRepository {
     }
 
     fun markAllAsRead(userIdVal: UUID) = transaction(db) {
-        exec("UPDATE notifications SET read = true WHERE user_id = '$userIdVal' AND active = true")
+        NotificationsTable.update({
+            (NotificationsTable.userId eq EntityID(userIdVal, UsersTable)) and
+                (NotificationsTable.active eq true)
+        }) { stmt ->
+            stmt[NotificationsTable.read] = true
+        }
     }
 
     fun softDelete(id: UUID) = transaction(db) {
