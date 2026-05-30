@@ -1,5 +1,6 @@
 package com.misuper.backend.config
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 
 data class DatabaseConfig(
@@ -34,6 +35,22 @@ data class AppConfig(
     val corsAllowedHosts: List<String>
 ) {
     companion object {
+        private fun Config.getStringListOrCsv(path: String): List<String> {
+            return runCatching { getStringList(path) }.getOrElse {
+                val rawValue = getString(path).trim()
+                runCatching {
+                    ConfigFactory.parseString("value = $rawValue").getStringList("value")
+                }.getOrElse {
+                    rawValue
+                        .removePrefix("[")
+                        .removeSuffix("]")
+                        .split(",")
+                        .map { value -> value.trim().trim('"', '\'') }
+                        .filter { value -> value.isNotBlank() }
+                }
+            }
+        }
+
         fun load(): AppConfig {
             val config = ConfigFactory.load().resolve()
 
@@ -66,7 +83,7 @@ data class AppConfig(
                     hashCost = pwd.getInt("hashCost"),
                     historySize = pwd.getInt("historySize")
                 ),
-                corsAllowedHosts = config.getStringList("cors.allowedHosts")
+                corsAllowedHosts = config.getStringListOrCsv("cors.allowedHosts")
             )
         }
     }
