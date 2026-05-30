@@ -66,10 +66,6 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
-tasks.named<Jar>("jar") {
-    enabled = false
-}
-
 tasks.named<JavaExec>("run") {
     standardInput = System.`in`
     workingDir = project.rootDir
