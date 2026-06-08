@@ -68,7 +68,9 @@ private fun loadEnv() {
         "REFRESH_TOKEN_EXPIRY_DAYS",
         "PASSWORD_HASH_COST",
         "PASSWORD_HISTORY_SIZE",
-        "CORS_ALLOWED_HOSTS"
+        "CORS_ALLOWED_HOSTS",
+        "OPENAI_API_KEY",
+        "OPENAI_MODEL"
     )
 
     val startDir = File(System.getProperty("user.dir") ?: ".")

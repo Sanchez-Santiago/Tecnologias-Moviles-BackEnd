@@ -104,6 +104,28 @@ paths:
       responses:
         "200":
           description: Texto listo para Intent ACTION_SEND
+  /api/tickets/analyze-image:
+    post:
+      summary: Analizar imagen de ticket con IA
+      description: Recibe una imagen en Base64 y devuelve comercio, fecha, total y productos detectados con cantidad y precio.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - imageBase64
+              properties:
+                imageBase64:
+                  type: string
+                  description: Imagen codificada en Base64. También acepta data URL.
+                mimeType:
+                  type: string
+                  example: image/jpeg
+      responses:
+        "200":
+          description: Productos detectados en el ticket
   /api/transactions:
     get:
       summary: Listar ingresos y egresos del grupo
