@@ -7,8 +7,10 @@ import com.misuper.backend.database.DatabaseFactory
 import com.misuper.backend.modules.auth.repositories.AuthRepository
 import com.misuper.backend.modules.auth.routes.AuthRoutes
 import com.misuper.backend.modules.auth.services.AuthService
+import com.misuper.backend.modules.groups.repositories.GroupInvitationRepository
 import com.misuper.backend.modules.groups.repositories.GroupRepository
 import com.misuper.backend.modules.groups.routes.GroupRoutes
+import com.misuper.backend.modules.groups.services.GroupInvitationService
 import com.misuper.backend.modules.groups.services.GroupService
 import com.misuper.backend.modules.products.repositories.CategoryRepository
 import com.misuper.backend.modules.products.repositories.ProductRepository
@@ -164,7 +166,9 @@ fun main() {
 
     val groupRepository = GroupRepository()
     val groupService = GroupService(groupRepository, authRepository)
-    val groupRoutes = GroupRoutes(groupService)
+    val groupInvitationRepository = GroupInvitationRepository()
+    val groupInvitationService = GroupInvitationService(groupInvitationRepository, groupRepository, authRepository)
+    val groupRoutes = GroupRoutes(groupService, groupInvitationService)
 
     val purchaseRepository = PurchaseRepository()
     val purchaseService = PurchaseService(purchaseRepository, productRepository, storeRepository, groupRepository)
@@ -202,6 +206,7 @@ fun main() {
 
     embeddedServer(Netty, port = appConfig.serverPort) {
         configureCors(appConfig.corsAllowedHosts)
+        configureLogging()
         configureSerialization()
         configureStatusPages()
         configureRateLimiting()

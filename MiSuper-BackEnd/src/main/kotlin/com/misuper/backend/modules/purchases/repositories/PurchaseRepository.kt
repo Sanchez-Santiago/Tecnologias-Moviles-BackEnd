@@ -15,7 +15,9 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import java.math.BigDecimal
+import java.time.LocalDateTime
 import java.util.UUID
 
 class PurchaseRepository {
@@ -107,6 +109,21 @@ class PurchaseRepository {
             stmt[PurchaseProductsTable.quantity] = quantityVal
             stmt[PurchaseProductsTable.unitPrice] = unitPriceVal
             stmt[PurchaseProductsTable.subtotal] = subtotalVal
+        }
+    }
+
+    fun update(id: UUID, storeIdVal: UUID?, notesVal: String?) = transaction(db) {
+        PurchasesTable.update({ PurchasesTable.id eq id }) { stmt ->
+            storeIdVal?.let { sid -> stmt[PurchasesTable.storeId] = EntityID(sid, StoresTable) }
+            if (notesVal != null) stmt[PurchasesTable.notes] = notesVal
+            stmt[PurchasesTable.updatedAt] = LocalDateTime.now()
+        }
+    }
+
+    fun softDelete(id: UUID) = transaction(db) {
+        PurchasesTable.update({ PurchasesTable.id eq id }) { stmt ->
+            stmt[PurchasesTable.active] = false
+            stmt[PurchasesTable.updatedAt] = LocalDateTime.now()
         }
     }
 }

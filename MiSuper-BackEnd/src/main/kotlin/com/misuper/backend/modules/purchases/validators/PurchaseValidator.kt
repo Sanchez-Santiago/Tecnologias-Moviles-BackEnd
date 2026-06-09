@@ -2,6 +2,7 @@ package com.misuper.backend.modules.purchases.validators
 
 import com.misuper.backend.exceptions.ValidationException
 import com.misuper.backend.modules.purchases.dto.CreatePurchaseRequest
+import com.misuper.backend.modules.purchases.dto.UpdatePurchaseRequest
 
 object PurchaseValidator {
 
@@ -20,5 +21,9 @@ object PurchaseValidator {
                 throw ValidationException("La cantidad debe ser mayor a cero")
             }
         }
+    }
+
+    fun validateUpdate(request: UpdatePurchaseRequest) {
+        // All fields are optional; no required validation for now
     }
 }

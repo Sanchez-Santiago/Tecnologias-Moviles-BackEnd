@@ -1,6 +1,7 @@
 package com.misuper.backend.modules.purchases.routes
 
 import com.misuper.backend.modules.purchases.dto.CreatePurchaseRequest
+import com.misuper.backend.modules.purchases.dto.UpdatePurchaseRequest
 import com.misuper.backend.modules.purchases.services.PurchaseService
 import com.misuper.backend.responses.ApiResponse
 import io.ktor.http.*
@@ -46,6 +47,21 @@ class PurchaseRoutes(private val purchaseService: PurchaseService) {
                     val request = call.receive<CreatePurchaseRequest>()
                     val purchase = purchaseService.create(userId, request)
                     call.respond(HttpStatusCode.Created, ApiResponse.success(purchase))
+                }
+
+                put("{id}") {
+                    val userId = userId(call)
+                    val purchaseId = UUID.fromString(call.parameters["id"])
+                    val request = call.receive<UpdatePurchaseRequest>()
+                    val purchase = purchaseService.update(purchaseId, userId, request)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(purchase))
+                }
+
+                delete("{id}") {
+                    val userId = userId(call)
+                    val purchaseId = UUID.fromString(call.parameters["id"])
+                    purchaseService.delete(purchaseId, userId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success("Compra eliminada"))
                 }
             }
         }

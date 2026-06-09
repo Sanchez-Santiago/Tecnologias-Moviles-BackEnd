@@ -3,6 +3,7 @@ package com.misuper.backend.database
 import com.misuper.backend.config.DatabaseConfig
 import com.misuper.backend.database.tables.BudgetItemsTable
 import com.misuper.backend.database.tables.BudgetsTable
+import com.misuper.backend.database.tables.GroupInvitationsTable
 import com.misuper.backend.database.tables.NotificationsTable
 import com.misuper.backend.database.tables.OffersTable
 import com.misuper.backend.database.tables.TicketMessagesTable
@@ -49,6 +50,8 @@ object DatabaseFactory {
             isAutoCommit = false
             transactionIsolation = "TRANSACTION_REPEATABLE_READ"
             addDataSourceProperty("prepareThreshold", "0")
+            addDataSourceProperty("preparedStatementCacheQueries", "0")
+            addDataSourceProperty("useServerSidePrepare", "false")
             validate()
         }
 

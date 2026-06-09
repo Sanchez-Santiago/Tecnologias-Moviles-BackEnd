@@ -9,6 +9,7 @@ import com.misuper.backend.modules.purchases.dto.CreatePurchaseRequest
 import com.misuper.backend.modules.purchases.dto.PurchaseProductResponse
 import com.misuper.backend.modules.purchases.dto.PurchaseResponse
 import com.misuper.backend.modules.purchases.dto.PurchaseShareResponse
+import com.misuper.backend.modules.purchases.dto.UpdatePurchaseRequest
 import com.misuper.backend.modules.purchases.repositories.PurchaseItemInsert
 import com.misuper.backend.modules.purchases.repositories.PurchaseRepository
 import com.misuper.backend.modules.purchases.validators.PurchaseValidator
@@ -93,6 +94,38 @@ class PurchaseService(
         )
 
         return getById(purchaseId, userId)
+    }
+
+    fun update(purchaseId: UUID, userId: UUID, request: UpdatePurchaseRequest): PurchaseResponse {
+        PurchaseValidator.validateUpdate(request)
+
+        val row = purchaseRepository.findById(purchaseId)
+            ?: throw NotFoundException("Compra no encontrada")
+
+        val groupId = row[PurchasesTable.groupId].value
+        val memberRole = groupRepository.getMemberRole(groupId, userId)
+            ?: throw ForbiddenException("No eres miembro de este grupo")
+
+        val storeId = request.storeId?.let { UUID.fromString(it) }
+        storeId?.let { sid ->
+            storeRepository.findById(sid)
+                ?: throw NotFoundException("Tienda no encontrada")
+        }
+
+        purchaseRepository.update(purchaseId, storeId, request.notes)
+
+        return getById(purchaseId, userId)
+    }
+
+    fun delete(purchaseId: UUID, userId: UUID) {
+        val row = purchaseRepository.findById(purchaseId)
+            ?: throw NotFoundException("Compra no encontrada")
+
+        val groupId = row[PurchasesTable.groupId].value
+        val memberRole = groupRepository.getMemberRole(groupId, userId)
+            ?: throw ForbiddenException("No eres miembro de este grupo")
+
+        purchaseRepository.softDelete(purchaseId)
     }
 
     fun getShareText(purchaseId: UUID, userId: UUID): PurchaseShareResponse {
