@@ -40,8 +40,9 @@ fun Application.configureSerialization() {
     install(ContentNegotiation) {
         json(Json {
             ignoreUnknownKeys = true
-            prettyPrint = true
-            isLenient = true
+            prettyPrint = false
+            isLenient = false
+            encodeDefaults = true
             serializersModule = SerializersModule {
                 contextual(UUID::class, UUIDSerializer)
                 contextual(LocalDateTime::class, LocalDateTimeSerializer)

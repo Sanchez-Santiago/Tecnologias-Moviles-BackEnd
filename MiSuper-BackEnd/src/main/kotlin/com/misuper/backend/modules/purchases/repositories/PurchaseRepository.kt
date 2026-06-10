@@ -12,6 +12,7 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -118,6 +119,32 @@ class PurchaseRepository {
             if (notesVal != null) stmt[PurchasesTable.notes] = notesVal
             stmt[PurchasesTable.updatedAt] = LocalDateTime.now()
         }
+    }
+
+    fun findUserIdsByProductIds(productIds: List<UUID>): List<UUID> = transaction(db) {
+        if (productIds.isEmpty()) return@transaction emptyList()
+
+        val conditions = productIds.map {
+            PurchaseProductsTable.productId eq EntityID(it, ProductsTable)
+        }
+        val combined = conditions.reduce { a, b -> a or b }
+
+        val purchaseIds = PurchaseProductsTable.selectAll()
+            .where(combined)
+            .map { it[PurchaseProductsTable.purchaseId].value }
+            .distinct()
+
+        if (purchaseIds.isEmpty()) return@transaction emptyList<UUID>()
+
+        val purchaseConditions = purchaseIds.map {
+            PurchasesTable.id eq EntityID(it, PurchasesTable)
+        }
+        val purchaseCombined = purchaseConditions.reduce { a, b -> a or b }
+
+        PurchasesTable.selectAll()
+            .where(purchaseCombined)
+            .map { it[PurchasesTable.userId].value }
+            .distinct()
     }
 
     fun softDelete(id: UUID) = transaction(db) {

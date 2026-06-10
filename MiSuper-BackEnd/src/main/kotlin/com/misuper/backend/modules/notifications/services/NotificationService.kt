@@ -41,6 +41,10 @@ class NotificationService(
         return notificationRepository.countUnread(userId)
     }
 
+    fun create(userId: UUID, type: String, title: String, message: String, data: String? = null) {
+        notificationRepository.create(userId, type, title, message, data)
+    }
+
     private fun buildResponse(row: ResultRow): NotificationResponse {
         return NotificationResponse(
             id = row[NotificationsTable.id].value.toString(),

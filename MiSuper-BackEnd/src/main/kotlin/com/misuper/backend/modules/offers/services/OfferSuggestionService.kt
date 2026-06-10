@@ -1,7 +1,9 @@
-package com.misuper.backend.modules.tickets.services
+package com.misuper.backend.modules.offers.services
 
 import com.misuper.backend.exceptions.ValidationException
-import com.misuper.backend.modules.tickets.dto.AnalyzeTicketImageResponse
+import com.misuper.backend.modules.offers.dto.AiOfferSuggestion
+import com.misuper.backend.modules.offers.dto.AiOfferSuggestionResponse
+import com.misuper.backend.modules.offers.dto.OfferResponse
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -16,9 +18,8 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
-import java.util.Base64
 
-class TicketImageAnalysisService(
+class OfferSuggestionService(
     private val apiKey: String? = System.getProperty("GEMINI_API_KEY") ?: System.getenv("GEMINI_API_KEY"),
     private val model: String = System.getProperty("GEMINI_MODEL") ?: System.getenv("GEMINI_MODEL") ?: "gemini-2.0-flash",
     private val httpClient: HttpClient = HttpClient.newBuilder()
@@ -30,14 +31,15 @@ class TicketImageAnalysisService(
         isLenient = true
     }
 
-    fun analyze(imageBase64: String, mimeType: String): AnalyzeTicketImageResponse {
+    fun suggest(productNames: List<String>, offers: List<OfferResponse>): AiOfferSuggestionResponse {
         val key = apiKey?.takeIf { it.isNotBlank() }
             ?: throw ValidationException("Falta configurar GEMINI_API_KEY")
 
-        val cleanBase64 = normalizeBase64(imageBase64)
-        validateImage(cleanBase64, mimeType)
+        if (productNames.isEmpty() || offers.isEmpty()) {
+            return AiOfferSuggestionResponse(emptyList())
+        }
 
-        val requestBody = buildRequestBody(cleanBase64, mimeType)
+        val requestBody = buildRequestBody(productNames, offers)
         val request = HttpRequest.newBuilder()
             .uri(URI.create("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$key"))
             .timeout(Duration.ofSeconds(60))
@@ -53,7 +55,7 @@ class TicketImageAnalysisService(
                     .let { it as? JsonObject }?.get("error")
                     ?.let { it as? JsonObject }?.get("message")?.jsonPrimitive?.contentOrNull
             }.getOrNull() ?: "Error ${response.statusCode()}"
-            throw ValidationException("No se pudo analizar la imagen: ${errorMsg.replace('\n', ' ').replace('\r', ' ')}")
+            throw ValidationException("No se pudieron generar sugerencias: ${errorMsg.replace('\n', ' ').replace('\r', ' ')}")
         }
 
         val responseJson = json.parseToJsonElement(response.body())
@@ -61,30 +63,49 @@ class TicketImageAnalysisService(
             ?: throw ValidationException("La IA no devolvió una respuesta legible")
         val payload = extractJsonPayload(outputText)
 
-        return json.decodeFromString<AnalyzeTicketImageResponse>(payload)
+        return try {
+            json.decodeFromString<AiOfferSuggestionResponse>(payload)
+        } catch (_: Exception) {
+            AiOfferSuggestionResponse(emptyList())
+        }
     }
 
-    private fun buildRequestBody(imageBase64: String, mimeType: String): String {
+    private fun buildRequestBody(productNames: List<String>, offers: List<OfferResponse>): String {
+        val productsStr = productNames.joinToString("\n") { "- $it" }
+        val offersStr = offers.joinToString("\n---\n") { offer ->
+            buildString {
+                appendLine("ID: ${offer.id}")
+                appendLine("Título: ${offer.title}")
+                offer.description?.let { appendLine("Descripción: $it") }
+                offer.storeName?.let { appendLine("Tienda: $it") }
+                appendLine("Descuento: ${offer.discountValue} (${offer.discountType})")
+                offer.termsConditions?.let { appendLine("Términos: $it") }
+            }
+        }
+
         val instructions = """
-            Leé esta imagen de un ticket de compra de supermercado.
-            Devolvé solamente JSON válido con esta forma exacta:
+            Sos un asistente de supermercado que ayuda a encontrar ofertas relevantes para productos específicos.
+
+            Productos del usuario:
+            $productsStr
+
+            Ofertas activas disponibles:
+            $offersStr
+
+            Para cada producto, identificá cuáles de las ofertas disponibles son relevantes.
+            Considerá coincidencias directas de nombre, productos similares, o categorías relacionadas.
+            Devolvé SOLO JSON válido con este formato exacto (sin markdown):
             {
-              "storeName": "nombre del comercio o null",
-              "purchaseDate": "fecha visible o null",
-              "total": 123.45,
-              "products": [
+              "suggestions": [
                 {
-                  "name": "nombre del producto",
-                  "quantity": 1,
-                  "unitPrice": 123.45,
-                  "totalPrice": 123.45
+                  "productName": "nombre exacto del producto",
+                  "offerId": "ID de la oferta",
+                  "relevance": "ALTA o MEDIA o BAJA",
+                  "explanation": "explicación breve de por qué esta oferta es relevante para este producto"
                 }
               ]
             }
-            Incluí únicamente productos comprados. No incluyas subtotal, total, impuestos,
-            medios de pago, descuentos globales ni líneas administrativas como productos.
-            Si una cantidad o precio no se ve con certeza, usá null.
-            Usá punto decimal para los importes.
+            Si un producto no tiene ninguna oferta relevante, simplemente no lo incluyas.
         """.trimIndent()
 
         val body = buildJsonObject {
@@ -95,47 +116,16 @@ class TicketImageAnalysisService(
                         add(buildJsonObject {
                             put("text", instructions)
                         })
-                        add(buildJsonObject {
-                            put("inline_data", buildJsonObject {
-                                put("mime_type", mimeType)
-                                put("data", imageBase64)
-                            })
-                        })
                     })
                 })
             })
             put("generationConfig", buildJsonObject {
-                put("temperature", 0.2)
+                put("temperature", 0.3)
                 put("maxOutputTokens", 4096)
             })
         }
 
         return json.encodeToString(JsonObject.serializer(), body)
-    }
-
-    private fun normalizeBase64(value: String): String {
-        val trimmed = value.trim()
-        return if (trimmed.startsWith("data:", ignoreCase = true)) {
-            trimmed.substringAfter("base64,", missingDelimiterValue = "")
-        } else {
-            trimmed
-        }
-    }
-
-    private fun validateImage(imageBase64: String, mimeType: String) {
-        val allowedMimeTypes = setOf("image/jpeg", "image/png", "image/webp", "image/gif")
-        if (mimeType !in allowedMimeTypes) {
-            throw ValidationException("Formato de imagen no soportado")
-        }
-
-        val decodedSize = runCatching { Base64.getDecoder().decode(imageBase64).size }.getOrElse {
-            throw ValidationException("La imagen no tiene un Base64 válido")
-        }
-
-        val maxBytes = 10 * 1024 * 1024
-        if (decodedSize > maxBytes) {
-            throw ValidationException("La imagen no puede superar 10 MB")
-        }
     }
 
     private fun extractOutputText(element: JsonElement): String? {

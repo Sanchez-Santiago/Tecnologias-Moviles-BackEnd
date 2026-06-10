@@ -17,7 +17,9 @@ import com.misuper.backend.modules.purchases.repositories.PurchaseRepository
 import com.misuper.backend.modules.statistics.dto.BudgetProgress
 import com.misuper.backend.modules.statistics.dto.MonthlySummary
 import com.misuper.backend.modules.statistics.dto.SpendingByCategory
+import com.misuper.backend.modules.statistics.dto.SpendingByImportance
 import com.misuper.backend.modules.statistics.dto.SpendingByStore
+import com.misuper.backend.modules.statistics.dto.StoreFrequency
 import com.misuper.backend.modules.stores.repositories.StoreRepository
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -166,6 +168,95 @@ class StatisticsService(
                 period = budgetRow[BudgetsTable.period]
             )
         }
+    }
+
+    fun getSpendingByImportance(groupId: UUID, userId: UUID): List<SpendingByImportance> {
+        checkMembership(groupId, userId)
+
+        val purchases = purchaseRepository.findByGroupId(groupId)
+        val grandTotal = purchases.sumOf { it[PurchasesTable.total] }
+
+        val importanceTotals = mutableMapOf<String, MutableList<BigDecimal>>()
+        val processedPurchases = mutableSetOf<UUID>()
+        val purchaseIdsByImportance = mutableMapOf<String, MutableSet<UUID>>()
+        val itemCountByImportance = mutableMapOf<String, Int>()
+
+        purchases.forEach { purchase ->
+            val purchaseId = purchase[PurchasesTable.id].value
+            if (purchaseId in processedPurchases) return@forEach
+            processedPurchases.add(purchaseId)
+
+            val items = purchaseRepository.getItems(purchaseId)
+            items.forEach { item ->
+                val productId = item[PurchaseProductsTable.productId].value
+                val productRow = productRepository.findById(productId)
+                val priority = productRow?.let { row ->
+                    try { row[ProductsTable.priority] } catch (_: Exception) { "SECUNDARIO" }
+                } ?: "SECUNDARIO"
+
+                val normalized = when (priority.uppercase()) {
+                    "ESENCIAL" -> "ESENCIAL"
+                    "PRIMARIO" -> "PRIMARIO"
+                    else -> "SECUNDARIO"
+                }
+                importanceTotals.getOrPut(normalized) { mutableListOf() }
+                    .add(item[PurchaseProductsTable.subtotal])
+                purchaseIdsByImportance.getOrPut(normalized) { mutableSetOf() }.add(purchaseId)
+                itemCountByImportance.merge(normalized, 1, Int::plus)
+            }
+        }
+
+        val total = if (grandTotal > BigDecimal.ZERO) grandTotal else BigDecimal.ONE
+        val order = listOf("ESENCIAL", "PRIMARIO", "SECUNDARIO")
+
+        return order.mapNotNull { imp ->
+            val totals = importanceTotals[imp] ?: return@mapNotNull null
+            val sum = totals.sumOf { it }
+            SpendingByImportance(
+                importance = imp,
+                total = sum,
+                percentage = sum.divide(total, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .setScale(2, RoundingMode.HALF_UP)
+                    .toDouble(),
+                purchaseCount = purchaseIdsByImportance[imp]?.size ?: 0,
+                itemCount = itemCountByImportance[imp] ?: 0
+            )
+        }
+    }
+
+    fun getMostFrequentStore(groupId: UUID, userId: UUID): List<StoreFrequency> {
+        checkMembership(groupId, userId)
+
+        val purchases = purchaseRepository.findByGroupId(groupId)
+        val grandTotal = purchases.sumOf { it[PurchasesTable.total] }
+        val totalCount = purchases.size
+
+        val storeStats = mutableMapOf<UUID?, MutableList<BigDecimal>>()
+        purchases.forEach { purchase ->
+            val storeId = purchase[PurchasesTable.storeId]
+            val total = purchase[PurchasesTable.total]
+            storeStats.getOrPut(storeId?.value) { mutableListOf() }.add(total)
+        }
+
+        val countTotal = if (totalCount > 0) totalCount.toBigDecimal() else BigDecimal.ONE
+
+        return storeStats.map { (storeId, totals) ->
+            val storeName = storeId?.let { sid ->
+                storeRepository.findById(sid)?.get(StoresTable.name)
+            } ?: "Sin tienda"
+            StoreFrequency(
+                storeId = storeId?.toString(),
+                storeName = storeName,
+                purchaseCount = totals.size,
+                totalSpent = totals.sumOf { it },
+                percentage = totals.size.toBigDecimal()
+                    .divide(countTotal, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .setScale(2, RoundingMode.HALF_UP)
+                    .toDouble()
+            )
+        }.sortedByDescending { it.purchaseCount }
     }
 
     private fun checkMembership(groupId: UUID, userId: UUID) {

@@ -13,6 +13,14 @@ object UserValidator {
         if (request.fullName.length < 2) {
             throw ValidationException("El nombre debe tener al menos 2 caracteres")
         }
+        request.email?.let { email ->
+            if (email.isBlank()) {
+                throw ValidationException("El email no puede estar vacío")
+            }
+            if (!email.matches(Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"))) {
+                throw ValidationException("Formato de email inválido")
+            }
+        }
     }
 
     fun validateChangePassword(request: ChangePasswordRequest) {

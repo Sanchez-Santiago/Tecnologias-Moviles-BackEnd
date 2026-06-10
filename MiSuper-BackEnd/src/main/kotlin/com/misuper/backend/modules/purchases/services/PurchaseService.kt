@@ -4,6 +4,7 @@ import com.misuper.backend.database.tables.*
 import com.misuper.backend.exceptions.ForbiddenException
 import com.misuper.backend.exceptions.NotFoundException
 import com.misuper.backend.modules.groups.repositories.GroupRepository
+import com.misuper.backend.modules.notifications.services.NotificationService
 import com.misuper.backend.modules.products.repositories.ProductRepository
 import com.misuper.backend.modules.purchases.dto.CreatePurchaseRequest
 import com.misuper.backend.modules.purchases.dto.PurchaseProductResponse
@@ -22,7 +23,8 @@ class PurchaseService(
     private val purchaseRepository: PurchaseRepository,
     private val productRepository: ProductRepository,
     private val storeRepository: StoreRepository,
-    private val groupRepository: GroupRepository
+    private val groupRepository: GroupRepository,
+    private val notificationService: NotificationService
 ) {
     fun getByGroup(groupId: UUID, userId: UUID): List<PurchaseResponse> {
         val group = groupRepository.findById(groupId)
@@ -92,6 +94,24 @@ class PurchaseService(
             notesVal = request.notes,
             items = items
         )
+
+        val largeThreshold = BigDecimal.valueOf(50000)
+        if (total >= largeThreshold) {
+            val members = groupRepository.getMembers(groupId)
+            val storeName = storeId?.let { storeRepository.findById(it)?.get(StoresTable.name) }
+            members.forEach { member ->
+                val memberId = member[GroupMembersTable.userId].value
+                if (memberId != userId) {
+                    notificationService.create(
+                        userId = memberId,
+                        type = "PURCHASE",
+                        title = "Compra grande en ${storeName ?: "supermercado"}",
+                        message = "Se realizó una compra por $${total} en el grupo",
+                        data = """{"purchaseId":"$purchaseId","groupId":"$groupId"}"""
+                    )
+                }
+            }
+        }
 
         return getById(purchaseId, userId)
     }

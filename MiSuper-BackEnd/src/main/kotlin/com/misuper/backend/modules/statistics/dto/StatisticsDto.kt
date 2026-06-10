@@ -39,6 +39,24 @@ data class BudgetProgress(
 )
 
 @Serializable
+data class SpendingByImportance(
+    val importance: String,
+    @Contextual val total: BigDecimal,
+    val percentage: Double,
+    val purchaseCount: Int,
+    val itemCount: Int
+)
+
+@Serializable
+data class StoreFrequency(
+    val storeId: String? = null,
+    val storeName: String,
+    val purchaseCount: Int,
+    @Contextual val totalSpent: BigDecimal,
+    val percentage: Double
+)
+
+@Serializable
 data class GroupStatsResponse(
     val totalSpent: String,
     val totalPurchases: Int,

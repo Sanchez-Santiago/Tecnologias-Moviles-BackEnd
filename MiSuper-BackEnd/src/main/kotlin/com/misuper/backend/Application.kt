@@ -26,6 +26,7 @@ import com.misuper.backend.modules.notifications.services.NotificationService
 import com.misuper.backend.modules.offers.repositories.OfferRepository
 import com.misuper.backend.modules.offers.routes.OfferRoutes
 import com.misuper.backend.modules.offers.services.OfferService
+import com.misuper.backend.modules.offers.services.OfferSuggestionService
 import com.misuper.backend.modules.purchases.repositories.PurchaseRepository
 import com.misuper.backend.modules.statistics.routes.StatisticsRoutes
 import com.misuper.backend.modules.statistics.services.StatisticsService
@@ -71,8 +72,8 @@ private fun loadEnv() {
         "PASSWORD_HASH_COST",
         "PASSWORD_HISTORY_SIZE",
         "CORS_ALLOWED_HOSTS",
-        "OPENAI_API_KEY",
-        "OPENAI_MODEL"
+        "GEMINI_API_KEY",
+        "GEMINI_MODEL"
     )
 
     val startDir = File(System.getProperty("user.dir") ?: ".")
@@ -164,14 +165,18 @@ fun main() {
     val storeService = StoreService(storeRepository)
     val storeRoutes = StoreRoutes(storeService)
 
+    val notificationRepository = NotificationRepository()
+    val notificationService = NotificationService(notificationRepository)
+    val notificationRoutes = NotificationRoutes(notificationService)
+
     val groupRepository = GroupRepository()
     val groupService = GroupService(groupRepository, authRepository)
     val groupInvitationRepository = GroupInvitationRepository()
-    val groupInvitationService = GroupInvitationService(groupInvitationRepository, groupRepository, authRepository)
+    val groupInvitationService = GroupInvitationService(groupInvitationRepository, groupRepository, authRepository, notificationService)
     val groupRoutes = GroupRoutes(groupService, groupInvitationService)
 
     val purchaseRepository = PurchaseRepository()
-    val purchaseService = PurchaseService(purchaseRepository, productRepository, storeRepository, groupRepository)
+    val purchaseService = PurchaseService(purchaseRepository, productRepository, storeRepository, groupRepository, notificationService)
     val purchaseRoutes = PurchaseRoutes(purchaseService)
 
     val budgetRepository = BudgetRepository()
@@ -181,10 +186,6 @@ fun main() {
     val ticketRepository = TicketRepository()
     val ticketService = TicketService(ticketRepository, groupRepository)
     val ticketRoutes = TicketRoutes(ticketService)
-
-    val notificationRepository = NotificationRepository()
-    val notificationService = NotificationService(notificationRepository)
-    val notificationRoutes = NotificationRoutes(notificationService)
 
     val statisticsService = StatisticsService(
         purchaseRepository = purchaseRepository,
@@ -197,8 +198,9 @@ fun main() {
     val statisticsRoutes = StatisticsRoutes(statisticsService)
 
     val offerRepository = OfferRepository()
-    val offerService = OfferService(offerRepository, storeRepository, productRepository)
-    val offerRoutes = OfferRoutes(offerService)
+    val offerService = OfferService(offerRepository, storeRepository, productRepository, notificationService, purchaseRepository)
+    val offerSuggestionService = OfferSuggestionService()
+    val offerRoutes = OfferRoutes(offerService, offerSuggestionService)
 
     val financialTransactionRepository = FinancialTransactionRepository()
     val financialTransactionService = FinancialTransactionService(financialTransactionRepository, groupRepository)

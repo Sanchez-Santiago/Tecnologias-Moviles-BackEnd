@@ -39,9 +39,18 @@ class UserService(
         val existing = userRepository.findById(userId)
             ?: throw NotFoundException("Usuario no encontrado")
 
+        val newEmail = request.email?.takeIf { it != existing[UsersTable.email] }
+        if (newEmail != null) {
+            val emailInUse = userRepository.findByEmail(newEmail)
+            if (emailInUse != null && emailInUse[UsersTable.id].value != userId) {
+                throw AuthException("El email ya está en uso por otro usuario")
+            }
+        }
+
         userRepository.updateProfile(
             userId = userId,
             fullNameVal = request.fullName,
+            emailVal = newEmail,
             phoneVal = request.phone,
             alternativePhoneVal = request.alternativePhone,
             profilePictureUrlVal = request.profilePictureUrl
@@ -50,7 +59,7 @@ class UserService(
         return UserProfileResponse(
             id = existing[UsersTable.id].value.toString(),
             fullName = request.fullName,
-            email = existing[UsersTable.email],
+            email = newEmail ?: existing[UsersTable.email],
             phone = request.phone,
             alternativePhone = request.alternativePhone,
             profilePictureUrl = request.profilePictureUrl,

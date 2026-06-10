@@ -35,10 +35,11 @@ class GroupRepository {
             .filter { row -> row[GroupsTable.id].value in groupIds }
     }
 
-    fun create(nameVal: String, descriptionVal: String?, createdByVal: UUID): UUID = transaction(db) {
+    fun create(nameVal: String, descriptionVal: String?, categoriaVal: String?, createdByVal: UUID): UUID = transaction(db) {
         GroupsTable.insert {
             it[name] = nameVal
             it[description] = descriptionVal
+            if (categoriaVal != null) it[categoria] = categoriaVal
             it[createdBy] = EntityID(createdByVal, UsersTable)
         }[GroupsTable.id].value
     }

@@ -23,6 +23,13 @@ class StatisticsRoutes(private val statisticsService: StatisticsService) {
                     call.respond(HttpStatusCode.OK, ApiResponse.success(stats))
                 }
 
+                get("group/{groupId}/spending-by-importance") {
+                    val userId = userId(call)
+                    val groupId = UUID.fromString(call.parameters["groupId"])
+                    val stats = statisticsService.getSpendingByImportance(groupId, userId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(stats))
+                }
+
                 get("group/{groupId}/spending-by-store") {
                     val userId = userId(call)
                     val groupId = UUID.fromString(call.parameters["groupId"])
@@ -34,6 +41,13 @@ class StatisticsRoutes(private val statisticsService: StatisticsService) {
                     val userId = userId(call)
                     val groupId = UUID.fromString(call.parameters["groupId"])
                     val stats = statisticsService.getMonthlySummary(groupId, userId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(stats))
+                }
+
+                get("group/{groupId}/most-frequent-store") {
+                    val userId = userId(call)
+                    val groupId = UUID.fromString(call.parameters["groupId"])
+                    val stats = statisticsService.getMostFrequentStore(groupId, userId)
                     call.respond(HttpStatusCode.OK, ApiResponse.success(stats))
                 }
 

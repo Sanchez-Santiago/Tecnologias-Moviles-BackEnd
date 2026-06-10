@@ -48,6 +48,25 @@ data class OfferResponse(
 )
 
 @Serializable
+data class AiOfferSuggestion(
+    val productName: String,
+    val offerId: String,
+    val relevance: String,
+    val explanation: String
+)
+
+@Serializable
+data class AiOfferSuggestionResponse(
+    val suggestions: List<AiOfferSuggestion>
+)
+
+@Serializable
+data class AiOfferSuggestionRequest(
+    val productNames: List<String>,
+    val storeId: String? = null
+)
+
+@Serializable
 data class MatchedOfferResponse(
     val productId: String,
     val productName: String,

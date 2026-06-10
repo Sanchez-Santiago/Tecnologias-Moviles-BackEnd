@@ -12,6 +12,7 @@ import com.misuper.backend.modules.groups.dto.InvitationResponse
 import com.misuper.backend.modules.groups.dto.InviteRequest
 import com.misuper.backend.modules.groups.repositories.GroupInvitationRepository
 import com.misuper.backend.modules.groups.repositories.GroupRepository
+import com.misuper.backend.modules.notifications.services.NotificationService
 import org.jetbrains.exposed.v1.core.ResultRow
 import java.time.LocalDateTime
 import java.util.UUID
@@ -19,7 +20,8 @@ import java.util.UUID
 class GroupInvitationService(
     private val groupInvitationRepository: GroupInvitationRepository,
     private val groupRepository: GroupRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val notificationService: NotificationService
 ) {
 
     fun invite(groupId: UUID, requesterId: UUID, request: InviteRequest): InvitationResponse {
@@ -45,6 +47,14 @@ class GroupInvitationService(
 
         groupInvitationRepository.create(groupId, request.email, requesterId)
         val row = groupInvitationRepository.findByGroupAndEmail(groupId, request.email)!!
+
+        notificationService.create(
+            userId = targetUserId,
+            type = "INVITATION",
+            title = "Nueva invitación a grupo",
+            message = "Has sido invitado al grupo '${group[GroupsTable.name]}'",
+            data = """{"groupId":"$groupId"}"""
+        )
 
         return toResponse(row)
     }
@@ -78,6 +88,16 @@ class GroupInvitationService(
         groupRepository.addMember(groupId, userId)
 
         groupInvitationRepository.updateStatus(row[GroupInvitationsTable.id].value, "ACCEPTED")
+
+        val inviterId = row[GroupInvitationsTable.invitedBy].value
+        val groupName = groupRepository.findById(groupId)?.get(GroupsTable.name) ?: ""
+        notificationService.create(
+            userId = inviterId,
+            type = "INVITATION",
+            title = "Invitación aceptada",
+            message = "Un usuario aceptó tu invitación al grupo '$groupName'",
+            data = """{"groupId":"$groupId"}"""
+        )
 
         val updated = groupInvitationRepository.findByToken(token)!!
         return toResponse(updated)

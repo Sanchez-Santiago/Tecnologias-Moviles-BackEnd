@@ -10,6 +10,7 @@ import java.util.UUID
 object GroupsTable : UUIDTable("groups") {
     val name: Column<String> = varchar("name", 255)
     val description: Column<String?> = text("description").nullable()
+    val categoria: Column<String> = varchar("categoria", 50).default("FAMILIA")
     val createdBy: Column<EntityID<UUID>> = reference("created_by", UsersTable)
     val active: Column<Boolean> = bool("active").default(true)
     val createdAt: Column<LocalDateTime> = datetime("created_at").clientDefault { LocalDateTime.now() }

@@ -24,6 +24,7 @@ class GroupService(
                 id = groupId.toString(),
                 name = row[GroupsTable.name],
                 description = row[GroupsTable.description],
+                categoria = row[GroupsTable.categoria],
                 createdBy = row[GroupsTable.createdBy].value.toString(),
                 memberCount = groupRepository.countMembers(groupId),
                 role = memberRow?.get(GroupMembersTable.role) ?: "MEMBER",
@@ -55,6 +56,7 @@ class GroupService(
             id = row[GroupsTable.id].value.toString(),
             name = row[GroupsTable.name],
             description = row[GroupsTable.description],
+            categoria = row[GroupsTable.categoria],
             createdBy = row[GroupsTable.createdBy].value.toString(),
             members = members,
             createdAt = row[GroupsTable.createdAt]
@@ -67,6 +69,7 @@ class GroupService(
         val groupId = groupRepository.create(
             nameVal = request.name,
             descriptionVal = request.description,
+            categoriaVal = request.categoria,
             createdByVal = userId
         )
 
@@ -77,6 +80,7 @@ class GroupService(
             id = groupId.toString(),
             name = row[GroupsTable.name],
             description = row[GroupsTable.description],
+            categoria = row[GroupsTable.categoria],
             createdBy = userId.toString(),
             memberCount = 1,
             role = "ADMIN",
@@ -101,6 +105,7 @@ class GroupService(
             id = groupId.toString(),
             name = updated[GroupsTable.name],
             description = updated[GroupsTable.description],
+            categoria = updated[GroupsTable.categoria],
             createdBy = updated[GroupsTable.createdBy].value.toString(),
             memberCount = groupRepository.countMembers(groupId),
             role = "ADMIN",

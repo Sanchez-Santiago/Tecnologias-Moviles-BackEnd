@@ -1,9 +1,11 @@
 package com.misuper.backend.modules.offers.routes
 
 import com.misuper.backend.exceptions.ForbiddenException
+import com.misuper.backend.modules.offers.dto.AiOfferSuggestionRequest
 import com.misuper.backend.modules.offers.dto.CreateOfferRequest
 import com.misuper.backend.modules.offers.dto.UpdateOfferRequest
 import com.misuper.backend.modules.offers.services.OfferService
+import com.misuper.backend.modules.offers.services.OfferSuggestionService
 import com.misuper.backend.responses.ApiResponse
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -14,7 +16,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.util.UUID
 
-class OfferRoutes(private val offerService: OfferService) {
+class OfferRoutes(
+    private val offerService: OfferService,
+    private val offerSuggestionService: OfferSuggestionService
+) {
 
     fun register(routing: Route) {
         routing.route("offers") {
@@ -30,6 +35,14 @@ class OfferRoutes(private val offerService: OfferService) {
                     val storeId = call.request.queryParameters["storeId"]
                     val offers = offerService.getActive(storeId)
                     call.respond(HttpStatusCode.OK, ApiResponse.success(offers))
+                }
+
+                post("ai-suggest") {
+                    val request = call.receive<AiOfferSuggestionRequest>()
+                    val storeId = request.storeId
+                    val activeOffers = offerService.getActive(storeId)
+                    val result = offerSuggestionService.suggest(request.productNames, activeOffers)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(result))
                 }
 
                 get("match") {

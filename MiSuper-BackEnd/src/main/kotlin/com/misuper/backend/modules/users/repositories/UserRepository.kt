@@ -22,15 +22,21 @@ class UserRepository {
         UsersTable.selectAll().where { UsersTable.id eq id }.singleOrNull()
     }
 
+    fun findByEmail(email: String): ResultRow? = transaction(db) {
+        UsersTable.selectAll().where { UsersTable.email eq email }.singleOrNull()
+    }
+
     fun updateProfile(
         userId: UUID,
         fullNameVal: String,
+        emailVal: String?,
         phoneVal: String?,
         alternativePhoneVal: String?,
         profilePictureUrlVal: String?
     ) = transaction(db) {
         UsersTable.update({ UsersTable.id eq userId }) {
             it[fullName] = fullNameVal
+            emailVal?.let { e -> it[email] = e }
             it[phone] = phoneVal
             it[alternativePhone] = alternativePhoneVal
             it[profilePictureUrl] = profilePictureUrlVal

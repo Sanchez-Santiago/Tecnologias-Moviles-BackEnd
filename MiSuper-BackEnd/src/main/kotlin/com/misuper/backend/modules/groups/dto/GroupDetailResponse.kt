@@ -9,6 +9,7 @@ data class GroupDetailResponse(
     val id: String,
     val name: String,
     val description: String? = null,
+    val categoria: String = "FAMILIA",
     val createdBy: String,
     val members: List<GroupMemberResponse>,
     @Contextual val createdAt: LocalDateTime
