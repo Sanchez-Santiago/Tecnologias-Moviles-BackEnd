@@ -124,6 +124,18 @@ class BudgetService(
         return getById(id, userId)
     }
 
+    fun activate(id: UUID, userId: UUID): BudgetResponse {
+        val row = budgetRepository.findById(id)
+            ?: throw NotFoundException("Presupuesto no encontrado")
+
+        val groupId = row[BudgetsTable.groupId].value
+        val memberRole = groupRepository.getMemberRole(groupId, userId)
+            ?: throw ForbiddenException("No eres miembro de este grupo")
+
+        budgetRepository.activate(id, groupId)
+        return getById(id, userId)
+    }
+
     fun softDelete(id: UUID, userId: UUID) {
         val row = budgetRepository.findById(id)
             ?: throw NotFoundException("Presupuesto no encontrado")

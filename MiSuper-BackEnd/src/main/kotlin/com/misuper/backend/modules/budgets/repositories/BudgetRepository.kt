@@ -134,6 +134,17 @@ class BudgetRepository {
         }
     }
 
+    fun activate(id: UUID, groupIdVal: UUID) = transaction(db) {
+        BudgetsTable.update({ BudgetsTable.groupId eq EntityID(groupIdVal, GroupsTable) }) { stmt ->
+            stmt[BudgetsTable.active] = false
+            stmt[BudgetsTable.updatedAt] = LocalDateTime.now()
+        }
+        BudgetsTable.update({ BudgetsTable.id eq id }) { stmt ->
+            stmt[BudgetsTable.active] = true
+            stmt[BudgetsTable.updatedAt] = LocalDateTime.now()
+        }
+    }
+
     fun softDelete(id: UUID) = transaction(db) {
         BudgetsTable.update({ BudgetsTable.id eq id }) { stmt ->
             stmt[BudgetsTable.active] = false

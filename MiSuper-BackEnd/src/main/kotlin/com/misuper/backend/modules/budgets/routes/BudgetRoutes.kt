@@ -50,6 +50,13 @@ class BudgetRoutes(private val budgetService: BudgetService) {
                     call.respond(HttpStatusCode.OK, ApiResponse.success(budget))
                 }
 
+                patch("{id}/activate") {
+                    val userId = userId(call)
+                    val budgetId = UUID.fromString(call.parameters["id"])
+                    val budget = budgetService.activate(budgetId, userId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(budget))
+                }
+
                 delete("{id}") {
                     val userId = userId(call)
                     val budgetId = UUID.fromString(call.parameters["id"])

@@ -6,6 +6,7 @@ import com.misuper.backend.modules.auth.routes.AuthRoutes
 import com.misuper.backend.modules.budgets.routes.BudgetRoutes
 import com.misuper.backend.modules.groups.routes.GroupRoutes
 import com.misuper.backend.modules.notifications.routes.NotificationRoutes
+import com.misuper.backend.modules.shoppinglist.routes.ShoppingListRoutes
 import com.misuper.backend.modules.offers.routes.OfferRoutes
 import com.misuper.backend.modules.statistics.routes.StatisticsRoutes
 import com.misuper.backend.modules.tickets.routes.TicketRoutes
@@ -55,6 +56,7 @@ fun Application.configureRouting(
     notificationRoutes: NotificationRoutes,
     statisticsRoutes: StatisticsRoutes,
     offerRoutes: OfferRoutes,
+    shoppingListRoutes: ShoppingListRoutes,
     financialTransactionRoutes: FinancialTransactionRoutes,
     serverPort: Int,
     startTime: Long
@@ -92,6 +94,7 @@ fun Application.configureRouting(
             notificationRoutes.register(this)
             statisticsRoutes.register(this)
             offerRoutes.register(this)
+            shoppingListRoutes.register(this)
             financialTransactionRoutes.register(this)
         }
     }

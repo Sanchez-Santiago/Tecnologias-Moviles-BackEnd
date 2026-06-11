@@ -197,6 +197,10 @@ fun main() {
     )
     val statisticsRoutes = StatisticsRoutes(statisticsService)
 
+    val shoppingListRepository = com.misuper.backend.modules.shoppinglist.repositories.ShoppingListRepository()
+    val shoppingListService = com.misuper.backend.modules.shoppinglist.services.ShoppingListService(shoppingListRepository, groupRepository)
+    val shoppingListRoutes = com.misuper.backend.modules.shoppinglist.routes.ShoppingListRoutes(shoppingListService)
+
     val offerRepository = OfferRepository()
     val offerService = OfferService(offerRepository, storeRepository, productRepository, notificationService, purchaseRepository)
     val offerSuggestionService = OfferSuggestionService()
@@ -213,7 +217,7 @@ fun main() {
         configureStatusPages()
         configureRateLimiting()
         configureSecurity(jwtService)
-        configureRouting(authRoutes, userRoutes, productRoutes, storeRoutes, groupRoutes, purchaseRoutes, budgetRoutes, ticketRoutes, notificationRoutes, statisticsRoutes, offerRoutes, financialTransactionRoutes, appConfig.serverPort, startTime)
+        configureRouting(authRoutes, userRoutes, productRoutes, storeRoutes, groupRoutes, purchaseRoutes, budgetRoutes, ticketRoutes, notificationRoutes, statisticsRoutes, offerRoutes, shoppingListRoutes, financialTransactionRoutes, appConfig.serverPort, startTime)
 
         monitor.subscribe(ApplicationStarted) {
             val url = "http://localhost:${appConfig.serverPort}"
