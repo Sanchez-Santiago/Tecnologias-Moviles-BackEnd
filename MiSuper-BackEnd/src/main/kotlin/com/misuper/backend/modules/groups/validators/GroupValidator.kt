@@ -5,7 +5,7 @@ import com.misuper.backend.modules.groups.dto.CreateGroupRequest
 
 object GroupValidator {
 
-    private val validCategorias = setOf("FAMILIA", "AMIGOS", "TRABAJO")
+    private val validCategorias = setOf("FAMILIA", "AMIGOS", "TRABAJO", "INDIVIDUAL")
 
     fun validateCreate(request: CreateGroupRequest) {
         if (request.name.isBlank()) {

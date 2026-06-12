@@ -28,6 +28,10 @@ class GroupInvitationService(
         val group = groupRepository.findById(groupId)
             ?: throw NotFoundException("Grupo no encontrado")
 
+        if (group[GroupsTable.categoria] == "INDIVIDUAL") {
+            throw ForbiddenException("No puedes invitar miembros a un grupo individual")
+        }
+
         requireAdmin(groupId, requesterId)
 
         val targetUser = authRepository.findByEmail(request.email.lowercase())
