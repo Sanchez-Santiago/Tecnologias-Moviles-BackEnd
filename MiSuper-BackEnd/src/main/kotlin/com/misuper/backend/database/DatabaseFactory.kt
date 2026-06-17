@@ -37,6 +37,7 @@ object DatabaseFactory {
                 .dataSource(config.url, config.user, config.password)
                 .baselineOnMigrate(true)
                 .baselineVersion("0")
+                .validateOnMigrate(false)
                 .load()
                 .migrate()
         }

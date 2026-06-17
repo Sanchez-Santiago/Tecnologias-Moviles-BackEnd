@@ -14,6 +14,7 @@ import com.misuper.backend.modules.transactions.routes.FinancialTransactionRoute
 import com.misuper.backend.modules.products.routes.ProductRoutes
 import com.misuper.backend.modules.purchases.routes.PurchaseRoutes
 import com.misuper.backend.modules.stores.routes.StoreRoutes
+import com.misuper.backend.modules.periods.routes.PeriodRoutes
 import com.misuper.backend.modules.users.routes.UserRoutes
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -56,6 +57,7 @@ fun Application.configureRouting(
     notificationRoutes: NotificationRoutes,
     statisticsRoutes: StatisticsRoutes,
     offerRoutes: OfferRoutes,
+    periodRoutes: PeriodRoutes,
     shoppingListRoutes: ShoppingListRoutes,
     financialTransactionRoutes: FinancialTransactionRoutes,
     serverPort: Int,
@@ -94,6 +96,7 @@ fun Application.configureRouting(
             notificationRoutes.register(this)
             statisticsRoutes.register(this)
             offerRoutes.register(this)
+            periodRoutes.register(this)
             shoppingListRoutes.register(this)
             financialTransactionRoutes.register(this)
         }

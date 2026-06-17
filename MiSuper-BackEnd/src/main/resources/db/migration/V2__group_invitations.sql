@@ -10,6 +10,11 @@ CREATE TABLE IF NOT EXISTS group_invitations (
     updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
+ALTER TABLE group_invitations ADD COLUMN IF NOT EXISTS invited_email VARCHAR(255);
+ALTER TABLE group_invitations ADD COLUMN IF NOT EXISTS invited_by UUID;
+ALTER TABLE group_invitations ADD COLUMN IF NOT EXISTS token VARCHAR(36) NOT NULL DEFAULT gen_random_uuid()::text;
+ALTER TABLE group_invitations ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'PENDING';
+ALTER TABLE group_invitations ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP NOT NULL DEFAULT (now() + interval '7 days');
 CREATE UNIQUE INDEX IF NOT EXISTS group_invitations_token_unique ON group_invitations (token);
 CREATE INDEX IF NOT EXISTS group_invitations_email_idx ON group_invitations (invited_email);
 CREATE INDEX IF NOT EXISTS group_invitations_status_idx ON group_invitations (status);

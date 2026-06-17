@@ -43,6 +43,9 @@ import com.misuper.backend.modules.stores.routes.StoreRoutes
 import com.misuper.backend.modules.stores.services.StoreService
 import com.misuper.backend.modules.users.repositories.UserRepository
 import com.misuper.backend.modules.users.routes.UserRoutes
+import com.misuper.backend.modules.periods.repositories.PeriodRepository
+import com.misuper.backend.modules.periods.routes.PeriodRoutes
+import com.misuper.backend.modules.periods.services.PeriodService
 import com.misuper.backend.modules.users.services.UserService
 import com.misuper.backend.plugins.*
 import com.misuper.backend.security.JwtService
@@ -210,6 +213,10 @@ fun main() {
     val financialTransactionService = FinancialTransactionService(financialTransactionRepository, groupRepository)
     val financialTransactionRoutes = FinancialTransactionRoutes(financialTransactionService)
 
+    val periodRepository = PeriodRepository()
+    val periodService = PeriodService(periodRepository, groupRepository)
+    val periodRoutes = PeriodRoutes(periodService)
+
     embeddedServer(Netty, port = appConfig.serverPort) {
         configureCors(appConfig.corsAllowedHosts)
         configureLogging()
@@ -217,7 +224,7 @@ fun main() {
         configureStatusPages()
         configureRateLimiting()
         configureSecurity(jwtService)
-        configureRouting(authRoutes, userRoutes, productRoutes, storeRoutes, groupRoutes, purchaseRoutes, budgetRoutes, ticketRoutes, notificationRoutes, statisticsRoutes, offerRoutes, shoppingListRoutes, financialTransactionRoutes, appConfig.serverPort, startTime)
+        configureRouting(authRoutes, userRoutes, productRoutes, storeRoutes, groupRoutes, purchaseRoutes, budgetRoutes, ticketRoutes, notificationRoutes, statisticsRoutes, offerRoutes, periodRoutes, shoppingListRoutes, financialTransactionRoutes, appConfig.serverPort, startTime)
 
         monitor.subscribe(ApplicationStarted) {
             val url = "http://localhost:${appConfig.serverPort}"

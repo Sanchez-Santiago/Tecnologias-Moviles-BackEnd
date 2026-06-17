@@ -8,15 +8,16 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
 
-object BudgetsTable : UUIDTable("budgets") {
+object GroupMonthlyPeriodsTable : UUIDTable("group_monthly_periods") {
     val groupId: Column<EntityID<UUID>> = reference("group_id", GroupsTable)
-    val name: Column<String> = varchar("name", 200)
-    val totalAmount: Column<BigDecimal> = decimal("total_amount", 12, 2)
-    val period: Column<String> = varchar("period", 20)
+    val name: Column<String?> = varchar("name", 255).nullable()
     val startDate: Column<LocalDateTime> = datetime("start_date")
     val endDate: Column<LocalDateTime?> = datetime("end_date").nullable()
-    val active: Column<Boolean> = bool("active").default(true)
+    val status: Column<String> = varchar("status", 20).default("OPEN")
+    val initialBalance: Column<BigDecimal> = decimal("initial_balance", 12, 2).default(BigDecimal.ZERO)
+    val finalBalance: Column<BigDecimal?> = decimal("final_balance", 12, 2).nullable()
     val createdAt: Column<LocalDateTime> = datetime("created_at").clientDefault { LocalDateTime.now() }
+    val closedBy: Column<EntityID<UUID>?> = reference("closed_by", UsersTable).nullable()
     val updatedAt: Column<LocalDateTime> = datetime("updated_at").clientDefault { LocalDateTime.now() }
+    val cycleType: Column<String> = varchar("cycle_type", 20).default("MONTHLY")
 }
-

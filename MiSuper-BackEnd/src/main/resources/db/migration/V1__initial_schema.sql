@@ -237,5 +237,7 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS priority VARCHAR(20) NOT NULL DEFA
 
 CREATE INDEX IF NOT EXISTS password_history_user_id_idx ON password_history (user_id);
 CREATE INDEX IF NOT EXISTS offers_store_id_idx ON offers (store_id);
+ALTER TABLE offers ADD COLUMN IF NOT EXISTS start_date TIMESTAMP;
+ALTER TABLE offers ADD COLUMN IF NOT EXISTS end_date TIMESTAMP;
 CREATE INDEX IF NOT EXISTS offers_active_dates_idx ON offers (active, start_date, end_date);
 CREATE INDEX IF NOT EXISTS financial_transactions_group_id_idx ON financial_transactions (group_id);
