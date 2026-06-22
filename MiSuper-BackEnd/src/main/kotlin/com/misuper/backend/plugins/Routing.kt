@@ -3,6 +3,7 @@ package com.misuper.backend.plugins
 import com.misuper.backend.database.DatabaseFactory
 import com.misuper.backend.exceptions.NotFoundException
 import com.misuper.backend.modules.auth.routes.AuthRoutes
+import com.misuper.backend.modules.docs.renderDocsHtml
 import com.misuper.backend.modules.budgets.routes.BudgetRoutes
 import com.misuper.backend.modules.groups.routes.GroupRoutes
 import com.misuper.backend.modules.notifications.routes.NotificationRoutes
@@ -83,6 +84,10 @@ fun Application.configureRouting(
             val content = this::class.java.classLoader.getResource("openapi.yaml")?.readText()
                 ?: throw NotFoundException("OpenAPI no encontrado")
             call.respondText(content, ContentType.Text.Plain)
+        }
+        get("/docs") {
+            val html = renderDocsHtml(serverPort, startTime / 1000)
+            call.respondText(html, ContentType.Text.Html)
         }
         route("api") {
             authRoutes.register(this)
