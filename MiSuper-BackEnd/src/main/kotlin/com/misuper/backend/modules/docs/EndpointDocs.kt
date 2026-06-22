@@ -622,7 +622,7 @@ ${allDocs().joinToString("\n") { module -> moduleHtml(module) }}
 <script>
   document.querySelectorAll('.toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const details = btn.parentElement.nextElementSibling;
+      const details = btn.nextElementSibling;
       details.classList.toggle('show');
       btn.textContent = details.classList.contains('show') ? 'Ocultar' : 'Ver más';
     });
