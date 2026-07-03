@@ -171,7 +171,8 @@ class BudgetService(
             startDate = row[BudgetsTable.startDate],
             endDate = row[BudgetsTable.endDate],
             items = items,
-            createdAt = row[BudgetsTable.createdAt]
+            createdAt = row[BudgetsTable.createdAt],
+            activo = row[BudgetsTable.active]
         )
     }
 }

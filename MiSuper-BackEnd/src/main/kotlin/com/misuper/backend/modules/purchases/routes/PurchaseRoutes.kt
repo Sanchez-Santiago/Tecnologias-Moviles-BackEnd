@@ -49,6 +49,13 @@ class PurchaseRoutes(private val purchaseService: PurchaseService) {
                     call.respond(HttpStatusCode.Created, ApiResponse.success(purchase))
                 }
 
+                post("{id}/cancel") {
+                    val userId = userId(call)
+                    val purchaseId = UUID.fromString(call.parameters["id"])
+                    purchaseService.cancelPurchase(purchaseId, userId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success("Compra cancelada"))
+                }
+
                 put("{id}") {
                     val userId = userId(call)
                     val purchaseId = UUID.fromString(call.parameters["id"])

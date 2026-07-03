@@ -15,7 +15,8 @@ data class BudgetResponse(
     @Contextual val startDate: LocalDateTime,
     @Contextual val endDate: LocalDateTime? = null,
     val items: List<BudgetItemResponse>,
-    @Contextual val createdAt: LocalDateTime
+    @Contextual val createdAt: LocalDateTime,
+    val activo: Boolean = false
 )
 
 @Serializable

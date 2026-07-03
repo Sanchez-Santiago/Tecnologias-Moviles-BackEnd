@@ -137,6 +137,17 @@ class PurchaseService(
         return getById(purchaseId, userId)
     }
 
+    fun cancelPurchase(purchaseId: UUID, userId: UUID) {
+        val row = purchaseRepository.findById(purchaseId)
+            ?: throw NotFoundException("Compra no encontrada")
+
+        val groupId = row[PurchasesTable.groupId].value
+        val memberRole = groupRepository.getMemberRole(groupId, userId)
+            ?: throw ForbiddenException("No eres miembro de este grupo")
+
+        purchaseRepository.softDelete(purchaseId)
+    }
+
     fun delete(purchaseId: UUID, userId: UUID) {
         val row = purchaseRepository.findById(purchaseId)
             ?: throw NotFoundException("Compra no encontrada")
