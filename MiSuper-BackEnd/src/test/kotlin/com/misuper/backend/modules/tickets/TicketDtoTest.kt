@@ -2,9 +2,7 @@ package com.misuper.backend.modules.tickets
 
 import com.misuper.backend.modules.tickets.dto.AnalyzeTicketImageRequest
 import com.misuper.backend.modules.tickets.dto.AnalyzeTicketImageResponse
-import com.misuper.backend.modules.tickets.dto.SaveAnalysisRequest
 import com.misuper.backend.modules.tickets.dto.TicketProductDetection
-import com.misuper.backend.modules.tickets.dto.UploadTicketRequest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -14,29 +12,7 @@ class TicketDtoTest {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    @Test
-    fun serializeAndDeserializeUploadTicketRequest() {
-        val original = UploadTicketRequest(
-            purchaseId = "550e8400-e29b-41d4-a716-446655440000",
-            imageBase64 = "dGVzdC1pbWFnZS1kYXRh",
-            mimeType = "image/png"
-        )
-        val encoded = json.encodeToString(UploadTicketRequest.serializer(), original)
-        val decoded = json.decodeFromString(UploadTicketRequest.serializer(), encoded)
 
-        assertEquals(original.purchaseId, decoded.purchaseId)
-        assertEquals(original.imageBase64, decoded.imageBase64)
-        assertEquals(original.mimeType, decoded.mimeType)
-    }
-
-    @Test
-    fun uploadTicketRequestDefaultsToJpeg() {
-        val request = UploadTicketRequest(
-            purchaseId = "id",
-            imageBase64 = "data"
-        )
-        assertEquals("image/jpeg", request.mimeType)
-    }
 
     @Test
     fun serializeAndDeserializeAnalyzeTicketImageRequest() {
@@ -90,29 +66,5 @@ class TicketDtoTest {
         assertEquals(0, decoded.products.size)
     }
 
-    @Test
-    fun serializeAndDeserializeSaveAnalysisRequest() {
-        val original = SaveAnalysisRequest(
-            extractedStore = "Carrefour",
-            extractedTotal = 35.99,
-            aiReport = "Productos detectados correctamente"
-        )
-        val encoded = json.encodeToString(SaveAnalysisRequest.serializer(), original)
-        val decoded = json.decodeFromString(SaveAnalysisRequest.serializer(), encoded)
 
-        assertEquals(original.extractedStore, decoded.extractedStore)
-        assertEquals(original.extractedTotal, decoded.extractedTotal)
-        assertEquals(original.aiReport, decoded.aiReport)
-    }
-
-    @Test
-    fun saveAnalysisRequestAllowsNullFields() {
-        val original = SaveAnalysisRequest()
-        val encoded = json.encodeToString(SaveAnalysisRequest.serializer(), original)
-        val decoded = json.decodeFromString(SaveAnalysisRequest.serializer(), encoded)
-
-        assertNull(decoded.extractedStore)
-        assertNull(decoded.extractedTotal)
-        assertNull(decoded.aiReport)
-    }
 }

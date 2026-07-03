@@ -15,7 +15,9 @@ import com.misuper.backend.modules.products.repositories.CategoryRepository
 import com.misuper.backend.modules.products.repositories.ProductRepository
 import com.misuper.backend.modules.purchases.repositories.PurchaseRepository
 import com.misuper.backend.modules.statistics.dto.BudgetProgress
+import com.misuper.backend.modules.statistics.dto.MemberSpending
 import com.misuper.backend.modules.statistics.dto.MonthlySummary
+import com.misuper.backend.modules.statistics.dto.MostPurchasedProduct
 import com.misuper.backend.modules.statistics.dto.SpendingByCategory
 import com.misuper.backend.modules.statistics.dto.SpendingByImportance
 import com.misuper.backend.modules.statistics.dto.SpendingByStore
@@ -257,6 +259,72 @@ class StatisticsService(
                     .toDouble()
             )
         }.sortedByDescending { it.purchaseCount }
+    }
+
+    fun getMostPurchasedProducts(groupId: UUID, userId: UUID): List<MostPurchasedProduct> {
+        checkMembership(groupId, userId)
+
+        val purchases = purchaseRepository.findByGroupId(groupId)
+        val productCounts = mutableMapOf<String, Int>()
+        val productTotals = mutableMapOf<String, BigDecimal>()
+
+        val processedPurchases = mutableSetOf<UUID>()
+        purchases.forEach { purchase ->
+            val purchaseId = purchase[PurchasesTable.id].value
+            if (purchaseId in processedPurchases) return@forEach
+            processedPurchases.add(purchaseId)
+
+            val items = purchaseRepository.getItems(purchaseId)
+            items.forEach { item ->
+                val productId = item[PurchaseProductsTable.productId].value
+                val productRow = productRepository.findById(productId)
+                val productName = productRow?.get(ProductsTable.name) ?: "Producto Desconocido"
+                
+                productCounts.merge(productName, item[PurchaseProductsTable.quantity].toInt(), Int::plus)
+                productTotals.merge(productName, item[PurchaseProductsTable.subtotal], BigDecimal::add)
+            }
+        }
+
+        return productCounts.map { (name, count) ->
+            MostPurchasedProduct(
+                productName = name,
+                count = count,
+                totalSpent = productTotals[name] ?: BigDecimal.ZERO
+            )
+        }.sortedByDescending { it.count }.take(10) // Top 10
+    }
+
+    fun getMemberSpending(groupId: UUID, userId: UUID): List<MemberSpending> {
+        checkMembership(groupId, userId)
+
+        val purchases = purchaseRepository.findByGroupId(groupId)
+        val grandTotal = purchases.sumOf { it[PurchasesTable.total] }
+        val memberTotals = mutableMapOf<UUID, BigDecimal>()
+        val memberCounts = mutableMapOf<UUID, Int>()
+
+        purchases.forEach { purchase ->
+            val uId = purchase[PurchasesTable.userId].value
+            val total = purchase[PurchasesTable.total]
+            memberTotals.merge(uId, total, BigDecimal::add)
+            memberCounts.merge(uId, 1, Int::plus)
+        }
+
+        val total = if (grandTotal > BigDecimal.ZERO) grandTotal else BigDecimal.ONE
+
+        return memberTotals.map { (uId, totalSpent) ->
+            // En un sistema real deberíamos buscar el nombre del usuario, aquí usamos un ID o un nombre mock.
+            // Al no tener UsersTable en este repo, devolvemos "Usuario"
+            MemberSpending(
+                userId = uId.toString(),
+                userName = "Usuario", 
+                totalSpent = totalSpent,
+                percentage = totalSpent.divide(total, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .setScale(2, RoundingMode.HALF_UP)
+                    .toDouble(),
+                purchaseCount = memberCounts[uId] ?: 0
+            )
+        }.sortedByDescending { it.totalSpent }
     }
 
     private fun checkMembership(groupId: UUID, userId: UUID) {

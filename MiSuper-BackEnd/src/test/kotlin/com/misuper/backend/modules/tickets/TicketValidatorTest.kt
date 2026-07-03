@@ -1,7 +1,8 @@
 package com.misuper.backend.modules.tickets
 
 import com.misuper.backend.exceptions.ValidationException
-import com.misuper.backend.modules.tickets.dto.UploadTicketRequest
+import com.misuper.backend.modules.tickets.dto.AddMessageRequest
+import com.misuper.backend.modules.tickets.dto.CreateTicketRequest
 import com.misuper.backend.modules.tickets.validators.TicketValidator
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
@@ -9,59 +10,39 @@ import kotlin.test.assertFailsWith
 class TicketValidatorTest {
 
     @Test
-    fun acceptsValidRequest() {
-        val request = UploadTicketRequest(
-            purchaseId = "550e8400-e29b-41d4-a716-446655440000",
-            imageBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-            mimeType = "image/jpeg"
+    fun acceptsValidCreateRequest() {
+        val request = CreateTicketRequest(
+            groupId = "550e8400-e29b-41d4-a716-446655440000",
+            title = "Issue with tickets",
+            description = "Can't upload",
+            priority = "HIGH"
         )
-        TicketValidator.validateUpload(request)
+        TicketValidator.validateCreate(request)
     }
 
     @Test
-    fun rejectsBlankPurchaseId() {
-        val request = UploadTicketRequest(
-            purchaseId = "  ",
-            imageBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+    fun rejectsCreateBlankTitle() {
+        val request = CreateTicketRequest(
+            groupId = "550e8400-e29b-41d4-a716-446655440000",
+            title = " ",
+            description = "Description"
         )
         assertFailsWith<ValidationException> {
-            TicketValidator.validateUpload(request)
+            TicketValidator.validateCreate(request)
         }
     }
 
     @Test
-    fun rejectsBlankImage() {
-        val request = UploadTicketRequest(
-            purchaseId = "550e8400-e29b-41d4-a716-446655440000",
-            imageBase64 = ""
-        )
-        assertFailsWith<ValidationException> {
-            TicketValidator.validateUpload(request)
-        }
+    fun acceptsValidMessage() {
+        val request = AddMessageRequest(message = "Hello")
+        TicketValidator.validateMessage(request)
     }
 
     @Test
-    fun rejectsUnsupportedMimeType() {
-        val request = UploadTicketRequest(
-            purchaseId = "550e8400-e29b-41d4-a716-446655440000",
-            imageBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-            mimeType = "image/gif"
-        )
+    fun rejectsBlankMessage() {
+        val request = AddMessageRequest(message = "   ")
         assertFailsWith<ValidationException> {
-            TicketValidator.validateUpload(request)
-        }
-    }
-
-    @Test
-    fun acceptsAllSupportedMimeTypes() {
-        val base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-        for (mime in listOf("image/jpeg", "image/png", "image/webp")) {
-            val request = UploadTicketRequest(
-                purchaseId = "550e8400-e29b-41d4-a716-446655440000",
-                imageBase64 = base64,
-                mimeType = mime
-            )
-            TicketValidator.validateUpload(request)
+            TicketValidator.validateMessage(request)
         }
     }
 }

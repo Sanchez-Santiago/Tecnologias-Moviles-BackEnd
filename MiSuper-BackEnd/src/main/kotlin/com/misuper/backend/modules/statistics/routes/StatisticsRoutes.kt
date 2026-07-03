@@ -57,6 +57,20 @@ class StatisticsRoutes(private val statisticsService: StatisticsService) {
                     val stats = statisticsService.getBudgetProgress(groupId, userId)
                     call.respond(HttpStatusCode.OK, ApiResponse.success(stats))
                 }
+
+                get("group/{groupId}/most-purchased-products") {
+                    val userId = userId(call)
+                    val groupId = UUID.fromString(call.parameters["groupId"])
+                    val stats = statisticsService.getMostPurchasedProducts(groupId, userId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(stats))
+                }
+
+                get("group/{groupId}/member-spending") {
+                    val userId = userId(call)
+                    val groupId = UUID.fromString(call.parameters["groupId"])
+                    val stats = statisticsService.getMemberSpending(groupId, userId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(stats))
+                }
             }
         }
     }

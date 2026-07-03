@@ -65,3 +65,19 @@ data class GroupStatsResponse(
     val spendingByStore: List<SpendingByStore>,
     val monthlySummary: List<MonthlySummary>
 )
+
+@Serializable
+data class MostPurchasedProduct(
+    val productName: String,
+    val count: Int,
+    @Contextual val totalSpent: BigDecimal
+)
+
+@Serializable
+data class MemberSpending(
+    val userId: String,
+    val userName: String,
+    @Contextual val totalSpent: BigDecimal,
+    val percentage: Double,
+    val purchaseCount: Int
+)
