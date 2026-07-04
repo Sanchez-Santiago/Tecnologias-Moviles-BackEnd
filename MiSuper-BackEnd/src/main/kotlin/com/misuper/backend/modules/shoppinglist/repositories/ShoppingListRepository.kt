@@ -73,13 +73,17 @@ class ShoppingListRepository {
 
     fun addProduct(
         shoppingListIdVal: UUID,
-        productIdVal: UUID,
+        productIdVal: UUID?,
+        customProductNameVal: String?,
         quantityVal: BigDecimal?,
         notesVal: String?
     ): UUID = transaction(db) {
         ShoppingListProductsTable.insert { stmt ->
             stmt[ShoppingListProductsTable.shoppingListId] = EntityID(shoppingListIdVal, ShoppingListsTable)
-            stmt[ShoppingListProductsTable.productId] = EntityID(productIdVal, ProductsTable)
+            if (productIdVal != null) {
+                stmt[ShoppingListProductsTable.productId] = EntityID(productIdVal, ProductsTable)
+            }
+            stmt[ShoppingListProductsTable.customProductName] = customProductNameVal
             if (quantityVal != null) stmt[ShoppingListProductsTable.finalQuantity] = quantityVal
             stmt[ShoppingListProductsTable.notes] = notesVal
         }[ShoppingListProductsTable.id].value

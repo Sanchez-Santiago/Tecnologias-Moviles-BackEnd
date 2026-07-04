@@ -19,7 +19,8 @@ data class UpdateShoppingListRequest(
 
 @Serializable
 data class AddProductRequest(
-    val productId: String,
+    val productId: String? = null,
+    val customProductName: String? = null,
     val quantity: Double? = null,
     val notes: String? = null
 )
@@ -46,8 +47,9 @@ data class ShoppingListResponse(
 @Serializable
 data class ShoppingListProductResponse(
     val id: String,
-    val productId: String,
-    val productName: String,
+    val productId: String? = null,
+    val productName: String = "Producto",
+    val customProductName: String? = null,
     val checked: Boolean = false,
     val finalPrice: Double? = null,
     val finalQuantity: Double? = null,

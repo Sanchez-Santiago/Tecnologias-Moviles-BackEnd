@@ -17,7 +17,8 @@ object ShoppingListsTable : UUIDTable("shopping_lists") {
 
 object ShoppingListProductsTable : UUIDTable("shopping_list_products") {
     val shoppingListId: Column<EntityID<UUID>> = reference("shopping_list_id", ShoppingListsTable)
-    val productId: Column<EntityID<UUID>> = reference("product_id", ProductsTable)
+    val productId: Column<EntityID<UUID>?> = reference("product_id", ProductsTable).nullable()
+    val customProductName: Column<String?> = varchar("custom_product_name", 255).nullable()
     val checked: Column<Boolean> = bool("checked").default(false)
     val finalPrice: Column<java.math.BigDecimal?> = decimal("final_price", 12, 2).nullable()
     val finalQuantity: Column<java.math.BigDecimal?> = decimal("final_quantity", 12, 2).nullable()

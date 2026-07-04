@@ -86,13 +86,20 @@ class ShoppingListService(
         val memberRole = groupRepository.getMemberRole(groupId, userId)
             ?: throw ForbiddenException("No eres miembro de este grupo")
 
-        val productId = UUID.fromString(request.productId)
-        shoppingListRepository.findProductById(productId)
-            ?: throw NotFoundException("Producto no encontrado")
+        val productId = request.productId?.let { UUID.fromString(it) }
+        val customProductName = request.customProductName
+
+        if (productId != null) {
+            shoppingListRepository.findProductById(productId)
+                ?: throw NotFoundException("Producto no encontrado")
+        } else if (customProductName.isNullOrBlank()) {
+            throw NotFoundException("Debe proporcionar productId o customProductName")
+        }
 
         shoppingListRepository.addProduct(
             shoppingListIdVal = listId,
             productIdVal = productId,
+            customProductNameVal = customProductName,
             quantityVal = request.quantity?.let { BigDecimal.valueOf(it) },
             notesVal = request.notes
         )
@@ -141,12 +148,14 @@ class ShoppingListService(
         val createdBy = row[ShoppingListsTable.createdBy]?.value
 
         val products = shoppingListRepository.getProducts(listId).map { prod ->
-            val productId = prod[ShoppingListProductsTable.productId].value
-            val productRow = shoppingListRepository.findProductById(productId)
+            val productId = prod[ShoppingListProductsTable.productId]?.value
+            val productRow = productId?.let { shoppingListRepository.findProductById(it) }
             ShoppingListProductResponse(
                 id = prod[ShoppingListProductsTable.id].value.toString(),
-                productId = productId.toString(),
-                productName = productRow?.get(ProductsTable.name) ?: "Producto",
+                productId = productId?.toString(),
+                productName = productRow?.get(ProductsTable.name)
+                    ?: prod[ShoppingListProductsTable.customProductName] ?: "Producto",
+                customProductName = prod[ShoppingListProductsTable.customProductName],
                 checked = prod[ShoppingListProductsTable.checked],
                 finalPrice = prod[ShoppingListProductsTable.finalPrice]?.toDouble(),
                 finalQuantity = prod[ShoppingListProductsTable.finalQuantity]?.toDouble(),
