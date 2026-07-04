@@ -14,8 +14,12 @@ object PurchaseValidator {
             throw ValidationException("Debe incluir al menos un producto")
         }
         request.items.forEach { item ->
-            if (item.productId.isBlank()) {
-                throw ValidationException("ID de producto inválido")
+            if (item.productId != null) {
+                if (item.productId.isBlank()) {
+                    throw ValidationException("ID de producto inválido")
+                }
+            } else if (item.productName.isNullOrBlank() || item.unitPrice == null || item.unitPrice <= 0) {
+                throw ValidationException("Debe incluir productId o productName + unitPrice")
             }
             if (item.quantity < 1) {
                 throw ValidationException("La cantidad debe ser mayor a cero")

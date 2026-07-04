@@ -78,7 +78,11 @@ class PurchaseRepository {
         items.forEach { item ->
             PurchaseProductsTable.insert { stmt ->
                 stmt[PurchaseProductsTable.purchaseId] = EntityID(purchaseId, PurchasesTable)
-                stmt[PurchaseProductsTable.productId] = EntityID(item.productId, ProductsTable)
+                if (item.productId != null) {
+                    stmt[PurchaseProductsTable.productId] = EntityID(item.productId, ProductsTable)
+                } else {
+                    stmt[PurchaseProductsTable.productId] = null
+                }
                 stmt[PurchaseProductsTable.productName] = item.productName
                 stmt[PurchaseProductsTable.quantity] = item.quantity
                 stmt[PurchaseProductsTable.unitPrice] = item.unitPrice
@@ -97,7 +101,7 @@ class PurchaseRepository {
 
     fun addItem(
         purchaseIdVal: UUID,
-        productIdVal: UUID,
+        productIdVal: UUID?,
         productNameVal: String,
         quantityVal: Int,
         unitPriceVal: BigDecimal,
@@ -105,7 +109,11 @@ class PurchaseRepository {
     ) = transaction(db) {
         PurchaseProductsTable.insert { stmt ->
             stmt[PurchaseProductsTable.purchaseId] = EntityID(purchaseIdVal, PurchasesTable)
-            stmt[PurchaseProductsTable.productId] = EntityID(productIdVal, ProductsTable)
+            if (productIdVal != null) {
+                stmt[PurchaseProductsTable.productId] = EntityID(productIdVal, ProductsTable)
+            } else {
+                stmt[PurchaseProductsTable.productId] = null
+            }
             stmt[PurchaseProductsTable.productName] = productNameVal
             stmt[PurchaseProductsTable.quantity] = quantityVal
             stmt[PurchaseProductsTable.unitPrice] = unitPriceVal
@@ -156,7 +164,7 @@ class PurchaseRepository {
 }
 
 data class PurchaseItemInsert(
-    val productId: UUID,
+    val productId: UUID?,
     val productName: String,
     val quantity: Int,
     val unitPrice: BigDecimal,

@@ -68,22 +68,37 @@ class PurchaseService(
 
         var total = BigDecimal.ZERO
         val items = request.items.map { item ->
-            val productId = UUID.fromString(item.productId)
-            val productRow = productRepository.findById(productId)
-                ?: throw NotFoundException("Producto no encontrado: ${item.productId}")
+            if (item.productId != null) {
+                val productId = UUID.fromString(item.productId)
+                val productRow = productRepository.findById(productId)
+                    ?: throw NotFoundException("Producto no encontrado: ${item.productId}")
 
-            val unitPrice = productRow[ProductsTable.price]
-            val quantity = BigDecimal.valueOf(item.quantity.toLong())
-            val subtotal = unitPrice * quantity
-            total += subtotal
+                val unitPrice = productRow[ProductsTable.price]
+                val quantity = BigDecimal.valueOf(item.quantity.toLong())
+                val subtotal = unitPrice * quantity
+                total += subtotal
 
-            PurchaseItemInsert(
-                productId = productId,
-                productName = productRow[ProductsTable.name],
-                quantity = item.quantity,
-                unitPrice = unitPrice,
-                subtotal = subtotal
-            )
+                PurchaseItemInsert(
+                    productId = productId,
+                    productName = productRow[ProductsTable.name],
+                    quantity = item.quantity,
+                    unitPrice = unitPrice,
+                    subtotal = subtotal
+                )
+            } else {
+                val unitPrice = BigDecimal.valueOf(item.unitPrice ?: 0.0)
+                val quantity = BigDecimal.valueOf(item.quantity.toLong())
+                val subtotal = unitPrice * quantity
+                total += subtotal
+
+                PurchaseItemInsert(
+                    productId = null,
+                    productName = item.productName ?: "",
+                    quantity = item.quantity,
+                    unitPrice = unitPrice,
+                    subtotal = subtotal
+                )
+            }
         }
 
         val purchaseId = purchaseRepository.createWithItems(
@@ -188,7 +203,7 @@ class PurchaseService(
         val items = purchaseRepository.getItems(purchaseId).map { item ->
             PurchaseProductResponse(
                 id = item[PurchaseProductsTable.id].value.toString(),
-                productId = item[PurchaseProductsTable.productId].value.toString(),
+                productId = item[PurchaseProductsTable.productId]?.value?.toString(),
                 productName = item[PurchaseProductsTable.productName],
                 quantity = item[PurchaseProductsTable.quantity],
                 unitPrice = item[PurchaseProductsTable.unitPrice],

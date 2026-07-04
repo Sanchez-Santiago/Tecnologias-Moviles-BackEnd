@@ -8,7 +8,7 @@ import java.util.UUID
 
 object PurchaseProductsTable : UUIDTable("purchase_products") {
     val purchaseId: Column<EntityID<UUID>> = reference("purchase_id", PurchasesTable)
-    val productId: Column<EntityID<UUID>> = reference("product_id", ProductsTable)
+    val productId: Column<EntityID<UUID>?> = reference("product_id", ProductsTable).nullable()
     val productName: Column<String> = varchar("product_name", 255)
     val quantity: Column<Int> = integer("quantity").default(1)
     val unitPrice: Column<BigDecimal> = decimal("unit_price", 12, 2)

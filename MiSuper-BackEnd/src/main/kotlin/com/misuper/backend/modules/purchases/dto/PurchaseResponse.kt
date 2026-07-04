@@ -23,7 +23,7 @@ data class PurchaseResponse(
 @Serializable
 data class PurchaseProductResponse(
     val id: String,
-    val productId: String,
+    val productId: String? = null,
     val productName: String,
     val quantity: Int,
     @Contextual val unitPrice: BigDecimal,

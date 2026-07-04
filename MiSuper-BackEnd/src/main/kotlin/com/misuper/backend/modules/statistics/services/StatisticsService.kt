@@ -52,14 +52,13 @@ class StatisticsService(
 
             val items = purchaseRepository.getItems(purchaseId)
             items.forEach { item ->
-                val productId = item[PurchaseProductsTable.productId].value
+                val productId = item[PurchaseProductsTable.productId]?.value ?: return@forEach
                 val productRow = productRepository.findById(productId)
                 val categoryId = productRow?.let { row ->
                     try { row[ProductsTable.categoryId].value } catch (_: Exception) { null }
                 }
-                val catId = categoryId
-                if (catId != null) {
-                    categoryTotals.merge(catId, item[PurchaseProductsTable.subtotal], BigDecimal::add)
+                if (categoryId != null) {
+                    categoryTotals.merge(categoryId, item[PurchaseProductsTable.subtotal], BigDecimal::add)
                 }
             }
         }
@@ -190,7 +189,7 @@ class StatisticsService(
 
             val items = purchaseRepository.getItems(purchaseId)
             items.forEach { item ->
-                val productId = item[PurchaseProductsTable.productId].value
+                val productId = item[PurchaseProductsTable.productId]?.value ?: return@forEach
                 val productRow = productRepository.findById(productId)
                 val priority = productRow?.let { row ->
                     try { row[ProductsTable.priority] } catch (_: Exception) { "SECUNDARIO" }
@@ -276,7 +275,7 @@ class StatisticsService(
 
             val items = purchaseRepository.getItems(purchaseId)
             items.forEach { item ->
-                val productId = item[PurchaseProductsTable.productId].value
+                val productId = item[PurchaseProductsTable.productId]?.value ?: return@forEach
                 val productRow = productRepository.findById(productId)
                 val productName = productRow?.get(ProductsTable.name) ?: "Producto Desconocido"
                 

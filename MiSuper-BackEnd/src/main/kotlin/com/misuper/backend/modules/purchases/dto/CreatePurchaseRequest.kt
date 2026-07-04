@@ -4,7 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CreatePurchaseItem(
-    val productId: String,
+    val productId: String? = null,
+    val productName: String? = null,
+    val unitPrice: Double? = null,
     val quantity: Int = 1
 )
 
