@@ -10,12 +10,10 @@ import com.misuper.backend.modules.notifications.routes.NotificationRoutes
 import com.misuper.backend.modules.shoppinglist.routes.ShoppingListRoutes
 import com.misuper.backend.modules.offers.routes.OfferRoutes
 import com.misuper.backend.modules.statistics.routes.StatisticsRoutes
-import com.misuper.backend.modules.tickets.routes.TicketRoutes
-import com.misuper.backend.modules.transactions.routes.FinancialTransactionRoutes
 import com.misuper.backend.modules.products.routes.ProductRoutes
-import com.misuper.backend.modules.purchases.routes.PurchaseRoutes
+
 import com.misuper.backend.modules.stores.routes.StoreRoutes
-import com.misuper.backend.modules.periods.routes.PeriodRoutes
+import com.misuper.backend.modules.tickets.routes.TicketRoutes
 import com.misuper.backend.modules.users.routes.UserRoutes
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -52,15 +50,12 @@ fun Application.configureRouting(
     productRoutes: ProductRoutes,
     storeRoutes: StoreRoutes,
     groupRoutes: GroupRoutes,
-    purchaseRoutes: PurchaseRoutes,
     budgetRoutes: BudgetRoutes,
-    ticketRoutes: TicketRoutes,
     notificationRoutes: NotificationRoutes,
     statisticsRoutes: StatisticsRoutes,
     offerRoutes: OfferRoutes,
-    periodRoutes: PeriodRoutes,
     shoppingListRoutes: ShoppingListRoutes,
-    financialTransactionRoutes: FinancialTransactionRoutes,
+    ticketRoutes: TicketRoutes,
     serverPort: Int,
     startTime: Long
 ) {
@@ -95,15 +90,12 @@ fun Application.configureRouting(
             productRoutes.register(this)
             storeRoutes.register(this)
             groupRoutes.register(this)
-            purchaseRoutes.register(this)
             budgetRoutes.register(this)
-            ticketRoutes.register(this)
             notificationRoutes.register(this)
             statisticsRoutes.register(this)
             offerRoutes.register(this)
-            periodRoutes.register(this)
             shoppingListRoutes.register(this)
-            financialTransactionRoutes.register(this)
+            ticketRoutes.register(this)
         }
     }
 }

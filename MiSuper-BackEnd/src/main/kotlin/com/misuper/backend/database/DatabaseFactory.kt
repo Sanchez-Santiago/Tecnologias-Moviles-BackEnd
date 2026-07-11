@@ -1,12 +1,10 @@
 package com.misuper.backend.database
 
 import com.misuper.backend.config.DatabaseConfig
-import com.misuper.backend.database.tables.BudgetItemsTable
 import com.misuper.backend.database.tables.BudgetsTable
 import com.misuper.backend.database.tables.GroupInvitationsTable
 import com.misuper.backend.database.tables.NotificationsTable
 import com.misuper.backend.database.tables.OffersTable
-import com.misuper.backend.database.tables.TicketMessagesTable
 import com.misuper.backend.database.tables.TicketsTable
 import com.misuper.backend.database.tables.CategoriesTable
 import com.misuper.backend.database.tables.GroupMembersTable
@@ -14,13 +12,10 @@ import com.misuper.backend.database.tables.GroupsTable
 import com.misuper.backend.database.tables.LoginHistoryTable
 import com.misuper.backend.database.tables.PasswordHistoryTable
 import com.misuper.backend.database.tables.ProductsTable
-import com.misuper.backend.database.tables.PurchaseProductsTable
-import com.misuper.backend.database.tables.PurchasesTable
 import com.misuper.backend.database.tables.RefreshTokensTable
 import com.misuper.backend.database.tables.StoresTable
 import com.misuper.backend.database.tables.UserSettingsTable
 import com.misuper.backend.database.tables.UsersTable
-import com.misuper.backend.database.tables.FinancialTransactionsTable
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.flywaydb.core.Flyway

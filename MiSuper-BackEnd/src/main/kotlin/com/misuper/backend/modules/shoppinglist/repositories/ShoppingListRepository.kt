@@ -3,20 +3,20 @@ package com.misuper.backend.modules.shoppinglist.repositories
 import com.misuper.backend.database.DatabaseFactory
 import com.misuper.backend.database.tables.GroupsTable
 import com.misuper.backend.database.tables.ProductsTable
-import com.misuper.backend.database.tables.ShoppingListProductsTable
+import com.misuper.backend.database.tables.ShoppingListItemsTable
 import com.misuper.backend.database.tables.ShoppingListsTable
 import com.misuper.backend.database.tables.UsersTable
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
-import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import java.math.BigDecimal
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.lessEq
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -31,6 +31,19 @@ class ShoppingListRepository {
     fun findByGroupId(groupIdVal: UUID): List<ResultRow> = transaction(db) {
         ShoppingListsTable.selectAll()
             .where { ShoppingListsTable.groupId eq EntityID(groupIdVal, GroupsTable) }
+            .orderBy(ShoppingListsTable.createdAt, SortOrder.DESC_NULLS_LAST)
+            .toList()
+    }
+
+    fun findByGroupIdAndDateRange(groupIdVal: UUID, from: LocalDate?, to: LocalDate?): List<ResultRow> = transaction(db) {
+        val groupIdEntity = EntityID(groupIdVal, GroupsTable)
+        val base = ShoppingListsTable.groupId eq groupIdEntity
+        val conditions = mutableListOf(base)
+        from?.let { conditions.add(ShoppingListsTable.createdAt greaterEq it.atStartOfDay()) }
+        to?.let { conditions.add(ShoppingListsTable.createdAt lessEq it.plusDays(1).atStartOfDay()) }
+        val finalCondition = conditions.reduce { a, b -> a.and(b) }
+        ShoppingListsTable.selectAll()
+            .where { finalCondition }
             .orderBy(ShoppingListsTable.createdAt, SortOrder.DESC_NULLS_LAST)
             .toList()
     }
@@ -59,15 +72,15 @@ class ShoppingListRepository {
     }
 
     fun delete(id: UUID) = transaction(db) {
-        ShoppingListProductsTable.deleteWhere {
+        ShoppingListItemsTable.deleteWhere {
             shoppingListId eq EntityID(id, ShoppingListsTable)
         }
         ShoppingListsTable.deleteWhere { ShoppingListsTable.id eq id }
     }
 
     fun getProducts(shoppingListIdVal: UUID): List<ResultRow> = transaction(db) {
-        ShoppingListProductsTable.selectAll()
-            .where { ShoppingListProductsTable.shoppingListId eq EntityID(shoppingListIdVal, ShoppingListsTable) }
+        ShoppingListItemsTable.selectAll()
+            .where { ShoppingListItemsTable.shoppingListId eq EntityID(shoppingListIdVal, ShoppingListsTable) }
             .toList()
     }
 
@@ -75,37 +88,45 @@ class ShoppingListRepository {
         shoppingListIdVal: UUID,
         productIdVal: UUID?,
         customProductNameVal: String?,
-        quantityVal: BigDecimal?,
+        estimatedPriceVal: BigDecimal?,
+        estimatedQuantityVal: BigDecimal?,
+        estimatedBrandVal: String?,
+        unitVal: String?,
+        priorityVal: String?,
         notesVal: String?
     ): UUID = transaction(db) {
-        ShoppingListProductsTable.insert { stmt ->
-            stmt[ShoppingListProductsTable.shoppingListId] = EntityID(shoppingListIdVal, ShoppingListsTable)
+        ShoppingListItemsTable.insert { stmt ->
+            stmt[ShoppingListItemsTable.shoppingListId] = EntityID(shoppingListIdVal, ShoppingListsTable)
             if (productIdVal != null) {
-                stmt[ShoppingListProductsTable.productId] = EntityID(productIdVal, ProductsTable)
+                stmt[ShoppingListItemsTable.productId] = EntityID(productIdVal, ProductsTable)
             }
-            stmt[ShoppingListProductsTable.customProductName] = customProductNameVal
-            if (quantityVal != null) stmt[ShoppingListProductsTable.finalQuantity] = quantityVal
-            stmt[ShoppingListProductsTable.notes] = notesVal
-        }[ShoppingListProductsTable.id].value
+            stmt[ShoppingListItemsTable.customProductName] = customProductNameVal
+            if (estimatedPriceVal != null) stmt[ShoppingListItemsTable.estimatedPrice] = estimatedPriceVal
+            if (estimatedQuantityVal != null) stmt[ShoppingListItemsTable.estimatedQuantity] = estimatedQuantityVal
+            stmt[ShoppingListItemsTable.estimatedBrand] = estimatedBrandVal
+            stmt[ShoppingListItemsTable.unit] = unitVal
+            if (priorityVal != null) stmt[ShoppingListItemsTable.priority] = priorityVal
+            stmt[ShoppingListItemsTable.notes] = notesVal
+        }[ShoppingListItemsTable.id].value
     }
 
     fun updateProduct(
         id: UUID,
         checkedVal: Boolean?,
-        finalPriceVal: BigDecimal?,
-        finalQuantityVal: BigDecimal?,
         notesVal: String?
     ) = transaction(db) {
-        ShoppingListProductsTable.update({ ShoppingListProductsTable.id eq id }) { stmt ->
-            checkedVal?.let { stmt[ShoppingListProductsTable.checked] = it }
-            if (finalPriceVal != null) stmt[ShoppingListProductsTable.finalPrice] = finalPriceVal
-            if (finalQuantityVal != null) stmt[ShoppingListProductsTable.finalQuantity] = finalQuantityVal
-            if (notesVal != null) stmt[ShoppingListProductsTable.notes] = notesVal
+        ShoppingListItemsTable.update({ ShoppingListItemsTable.id eq id }) { stmt ->
+            checkedVal?.let {
+                stmt[ShoppingListItemsTable.checked] = it
+                if (it) stmt[ShoppingListItemsTable.lastCheckedAt] = LocalDateTime.now()
+            }
+            if (notesVal != null) stmt[ShoppingListItemsTable.notes] = notesVal
+            stmt[ShoppingListItemsTable.updatedAt] = LocalDateTime.now()
         }
     }
 
     fun deleteProduct(id: UUID) = transaction(db) {
-        ShoppingListProductsTable.deleteWhere { ShoppingListProductsTable.id eq id }
+        ShoppingListItemsTable.deleteWhere { ShoppingListItemsTable.id eq id }
     }
 
     fun findProductById(id: UUID): ResultRow? = transaction(db) {

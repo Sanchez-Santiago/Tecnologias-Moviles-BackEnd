@@ -1,7 +1,7 @@
 package com.misuper.backend.modules.shoppinglist.services
 
 import com.misuper.backend.database.tables.ProductsTable
-import com.misuper.backend.database.tables.ShoppingListProductsTable
+import com.misuper.backend.database.tables.ShoppingListItemsTable
 import com.misuper.backend.database.tables.ShoppingListsTable
 import com.misuper.backend.exceptions.ForbiddenException
 import com.misuper.backend.exceptions.NotFoundException
@@ -10,20 +10,26 @@ import com.misuper.backend.modules.shoppinglist.dto.*
 import com.misuper.backend.modules.shoppinglist.repositories.ShoppingListRepository
 import org.jetbrains.exposed.v1.core.ResultRow
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.util.UUID
 
 class ShoppingListService(
     private val shoppingListRepository: ShoppingListRepository,
     private val groupRepository: GroupRepository
 ) {
-    fun getByGroup(groupId: UUID, userId: UUID): List<ShoppingListResponse> {
-        val group = groupRepository.findById(groupId)
+    fun getByGroup(groupId: UUID, userId: UUID, from: LocalDate? = null, to: LocalDate? = null): List<ShoppingListResponse> {
+        groupRepository.findById(groupId)
             ?: throw NotFoundException("Grupo no encontrado")
 
-        val memberRole = groupRepository.getMemberRole(groupId, userId)
+        groupRepository.getMemberRole(groupId, userId)
             ?: throw ForbiddenException("No eres miembro de este grupo")
 
-        return shoppingListRepository.findByGroupId(groupId).map { buildResponse(it) }
+        val lists = if (from != null || to != null) {
+            shoppingListRepository.findByGroupIdAndDateRange(groupId, from, to)
+        } else {
+            shoppingListRepository.findByGroupId(groupId)
+        }
+        return lists.map { buildResponse(it) }
     }
 
     fun getById(listId: UUID, userId: UUID): ShoppingListResponse {
@@ -31,7 +37,7 @@ class ShoppingListService(
             ?: throw NotFoundException("Lista de compra no encontrada")
 
         val groupId = row[ShoppingListsTable.groupId].value
-        val memberRole = groupRepository.getMemberRole(groupId, userId)
+        groupRepository.getMemberRole(groupId, userId)
             ?: throw ForbiddenException("No eres miembro de este grupo")
 
         return buildResponse(row)
@@ -42,7 +48,7 @@ class ShoppingListService(
         groupRepository.findById(groupId)
             ?: throw NotFoundException("Grupo no encontrado")
 
-        val memberRole = groupRepository.getMemberRole(groupId, userId)
+        groupRepository.getMemberRole(groupId, userId)
             ?: throw ForbiddenException("No eres miembro de este grupo")
 
         val listId = shoppingListRepository.create(
@@ -60,7 +66,7 @@ class ShoppingListService(
             ?: throw NotFoundException("Lista de compra no encontrada")
 
         val groupId = row[ShoppingListsTable.groupId].value
-        val memberRole = groupRepository.getMemberRole(groupId, userId)
+        groupRepository.getMemberRole(groupId, userId)
             ?: throw ForbiddenException("No eres miembro de este grupo")
 
         shoppingListRepository.update(id, request.name, request.description)
@@ -72,7 +78,7 @@ class ShoppingListService(
             ?: throw NotFoundException("Lista de compra no encontrada")
 
         val groupId = row[ShoppingListsTable.groupId].value
-        val memberRole = groupRepository.getMemberRole(groupId, userId)
+        groupRepository.getMemberRole(groupId, userId)
             ?: throw ForbiddenException("No eres miembro de este grupo")
 
         shoppingListRepository.delete(id)
@@ -83,24 +89,27 @@ class ShoppingListService(
             ?: throw NotFoundException("Lista de compra no encontrada")
 
         val groupId = row[ShoppingListsTable.groupId].value
-        val memberRole = groupRepository.getMemberRole(groupId, userId)
+        groupRepository.getMemberRole(groupId, userId)
             ?: throw ForbiddenException("No eres miembro de este grupo")
 
         val productId = request.productId?.let { UUID.fromString(it) }
-        val customProductName = request.customProductName
 
         if (productId != null) {
             shoppingListRepository.findProductById(productId)
                 ?: throw NotFoundException("Producto no encontrado")
-        } else if (customProductName.isNullOrBlank()) {
+        } else if (request.customProductName.isNullOrBlank()) {
             throw NotFoundException("Debe proporcionar productId o customProductName")
         }
 
         shoppingListRepository.addProduct(
             shoppingListIdVal = listId,
             productIdVal = productId,
-            customProductNameVal = customProductName,
-            quantityVal = request.quantity?.let { BigDecimal.valueOf(it) },
+            customProductNameVal = request.customProductName,
+            estimatedPriceVal = request.estimatedPrice?.let { BigDecimal.valueOf(it) },
+            estimatedQuantityVal = request.estimatedQuantity?.let { BigDecimal.valueOf(it) },
+            estimatedBrandVal = request.estimatedBrand,
+            unitVal = request.unit,
+            priorityVal = request.priority,
             notesVal = request.notes
         )
 
@@ -112,18 +121,16 @@ class ShoppingListService(
             ?: throw NotFoundException("Lista de compra no encontrada")
 
         val groupId = row[ShoppingListsTable.groupId].value
-        val memberRole = groupRepository.getMemberRole(groupId, userId)
+        groupRepository.getMemberRole(groupId, userId)
             ?: throw ForbiddenException("No eres miembro de este grupo")
 
         val products = shoppingListRepository.getProducts(listId)
-        val productRow = products.firstOrNull { it[ShoppingListProductsTable.id].value == productUuid }
+        val productRow = products.firstOrNull { it[ShoppingListItemsTable.id].value == productUuid }
             ?: throw NotFoundException("Producto no encontrado en la lista")
 
         shoppingListRepository.updateProduct(
             id = productUuid,
             checkedVal = request.checked,
-            finalPriceVal = request.finalPrice?.let { BigDecimal.valueOf(it) },
-            finalQuantityVal = request.finalQuantity?.let { BigDecimal.valueOf(it) },
             notesVal = request.notes
         )
 
@@ -135,7 +142,7 @@ class ShoppingListService(
             ?: throw NotFoundException("Lista de compra no encontrada")
 
         val groupId = row[ShoppingListsTable.groupId].value
-        val memberRole = groupRepository.getMemberRole(groupId, userId)
+        groupRepository.getMemberRole(groupId, userId)
             ?: throw ForbiddenException("No eres miembro de este grupo")
 
         shoppingListRepository.deleteProduct(productUuid)
@@ -148,18 +155,22 @@ class ShoppingListService(
         val createdBy = row[ShoppingListsTable.createdBy]?.value
 
         val products = shoppingListRepository.getProducts(listId).map { prod ->
-            val productId = prod[ShoppingListProductsTable.productId]?.value
+            val productId = prod[ShoppingListItemsTable.productId]?.value
             val productRow = productId?.let { shoppingListRepository.findProductById(it) }
             ShoppingListProductResponse(
-                id = prod[ShoppingListProductsTable.id].value.toString(),
+                id = prod[ShoppingListItemsTable.id].value.toString(),
                 productId = productId?.toString(),
                 productName = productRow?.get(ProductsTable.name)
-                    ?: prod[ShoppingListProductsTable.customProductName] ?: "Producto",
-                customProductName = prod[ShoppingListProductsTable.customProductName],
-                checked = prod[ShoppingListProductsTable.checked],
-                finalPrice = prod[ShoppingListProductsTable.finalPrice]?.toDouble(),
-                finalQuantity = prod[ShoppingListProductsTable.finalQuantity]?.toDouble(),
-                notes = prod[ShoppingListProductsTable.notes]
+                    ?: prod[ShoppingListItemsTable.customProductName] ?: "Producto",
+                customProductName = prod[ShoppingListItemsTable.customProductName],
+                estimatedPrice = prod[ShoppingListItemsTable.estimatedPrice]?.toDouble(),
+                estimatedQuantity = prod[ShoppingListItemsTable.estimatedQuantity].toDouble(),
+                estimatedBrand = prod[ShoppingListItemsTable.estimatedBrand],
+                unit = prod[ShoppingListItemsTable.unit],
+                priority = prod[ShoppingListItemsTable.priority],
+                checked = prod[ShoppingListItemsTable.checked],
+                notes = prod[ShoppingListItemsTable.notes],
+                lastCheckedAt = prod[ShoppingListItemsTable.lastCheckedAt]
             )
         }
 

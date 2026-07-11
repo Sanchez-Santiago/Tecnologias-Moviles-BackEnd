@@ -1,10 +1,7 @@
 package com.misuper.backend.modules.tickets.routes
 
-import com.misuper.backend.modules.tickets.dto.AddMessageRequest
-import com.misuper.backend.modules.tickets.dto.AnalyzeTicketImageRequest
 import com.misuper.backend.modules.tickets.dto.CreateTicketRequest
 import com.misuper.backend.modules.tickets.dto.UpdateTicketRequest
-import com.misuper.backend.modules.tickets.services.TicketImageAnalysisService
 import com.misuper.backend.modules.tickets.services.TicketService
 import com.misuper.backend.responses.ApiResponse
 import io.ktor.http.*
@@ -14,12 +11,10 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.time.LocalDate
 import java.util.UUID
 
-class TicketRoutes(
-    private val ticketService: TicketService,
-    private val ticketImageAnalysisService: TicketImageAnalysisService = TicketImageAnalysisService()
-) {
+class TicketRoutes(private val ticketService: TicketService) {
 
     fun register(routing: Route) {
         routing.route("tickets") {
@@ -30,7 +25,18 @@ class TicketRoutes(
                     val groupIdStr = call.request.queryParameters["groupId"]
                         ?: throw IllegalArgumentException("El parámetro groupId es obligatorio")
                     val groupId = UUID.fromString(groupIdStr)
-                    val tickets = ticketService.getByGroup(groupId, userId)
+
+                    val from = parseDateParam(call.request.queryParameters["from"])
+                    val to = parseDateParam(call.request.queryParameters["to"])
+                    val period = call.request.queryParameters["period"]
+
+                    val (fromDate, toDate) = if (period != null) {
+                        TicketService.parsePeriodToDateRange(period)
+                    } else {
+                        ticketService.resolveDateRange(from, to)
+                    }
+
+                    val tickets = ticketService.getByGroup(groupId, userId, fromDate, toDate)
                     call.respond(HttpStatusCode.OK, ApiResponse.success(tickets))
                 }
 
@@ -48,13 +54,6 @@ class TicketRoutes(
                     call.respond(HttpStatusCode.Created, ApiResponse.success(ticket))
                 }
 
-                post("analyze-image") {
-                    userId(call)
-                    val request = call.receive<AnalyzeTicketImageRequest>()
-                    val result = ticketImageAnalysisService.analyze(request.imageBase64, request.mimeType)
-                    call.respond(HttpStatusCode.OK, ApiResponse.success(result))
-                }
-
                 put("{id}") {
                     val userId = userId(call)
                     val ticketId = UUID.fromString(call.parameters["id"])
@@ -66,19 +65,15 @@ class TicketRoutes(
                 delete("{id}") {
                     val userId = userId(call)
                     val ticketId = UUID.fromString(call.parameters["id"])
-                    ticketService.softDelete(ticketId, userId)
+                    ticketService.delete(ticketId, userId)
                     call.respond(HttpStatusCode.OK, ApiResponse.success("Ticket eliminado"))
-                }
-
-                post("{id}/messages") {
-                    val userId = userId(call)
-                    val ticketId = UUID.fromString(call.parameters["id"])
-                    val request = call.receive<AddMessageRequest>()
-                    val message = ticketService.addMessage(ticketId, userId, request)
-                    call.respond(HttpStatusCode.Created, ApiResponse.success(message))
                 }
             }
         }
+    }
+
+    private fun parseDateParam(value: String?): LocalDate? {
+        return if (value != null && value.isNotBlank()) LocalDate.parse(value) else null
     }
 
     private fun userId(call: ApplicationCall): UUID {

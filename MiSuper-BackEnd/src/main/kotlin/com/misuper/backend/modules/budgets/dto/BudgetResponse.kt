@@ -9,20 +9,10 @@ import java.time.LocalDateTime
 data class BudgetResponse(
     val id: String,
     val groupId: String,
-    val name: String,
-    @Contextual val totalAmount: BigDecimal,
-    val period: String,
-    @Contextual val startDate: LocalDateTime,
-    @Contextual val endDate: LocalDateTime? = null,
-    val items: List<BudgetItemResponse>,
+    val startDate: String,
+    val endDate: String,
+    @Contextual val total: BigDecimal,
+    val createdBy: String? = null,
     @Contextual val createdAt: LocalDateTime,
-    val activo: Boolean = false
-)
-
-@Serializable
-data class BudgetItemResponse(
-    val id: String,
-    val categoryId: String,
-    val categoryName: String,
-    @Contextual val amount: BigDecimal
+    @Contextual val updatedAt: LocalDateTime
 )

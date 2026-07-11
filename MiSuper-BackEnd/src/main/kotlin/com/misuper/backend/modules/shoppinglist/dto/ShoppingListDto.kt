@@ -21,15 +21,17 @@ data class UpdateShoppingListRequest(
 data class AddProductRequest(
     val productId: String? = null,
     val customProductName: String? = null,
-    val quantity: Double? = null,
+    val estimatedPrice: Double? = null,
+    val estimatedQuantity: Double? = null,
+    val estimatedBrand: String? = null,
+    val unit: String? = null,
+    val priority: String? = null,
     val notes: String? = null
 )
 
 @Serializable
 data class UpdateProductRequest(
     val checked: Boolean? = null,
-    val finalPrice: Double? = null,
-    val finalQuantity: Double? = null,
     val notes: String? = null
 )
 
@@ -50,8 +52,12 @@ data class ShoppingListProductResponse(
     val productId: String? = null,
     val productName: String = "Producto",
     val customProductName: String? = null,
+    val estimatedPrice: Double? = null,
+    val estimatedQuantity: Double? = null,
+    val estimatedBrand: String? = null,
+    val unit: String? = null,
+    val priority: String = "PRIMARY",
     val checked: Boolean = false,
-    val finalPrice: Double? = null,
-    val finalQuantity: Double? = null,
-    val notes: String? = null
+    val notes: String? = null,
+    @Contextual val lastCheckedAt: LocalDateTime? = null
 )

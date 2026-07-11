@@ -13,6 +13,7 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.time.LocalDate
 import java.util.UUID
 
 class ShoppingListRoutes(private val shoppingListService: ShoppingListService) {
@@ -26,7 +27,9 @@ class ShoppingListRoutes(private val shoppingListService: ShoppingListService) {
                     val groupIdStr = call.request.queryParameters["groupId"]
                         ?: throw IllegalArgumentException("El parámetro groupId es obligatorio")
                     val groupId = UUID.fromString(groupIdStr)
-                    val lists = shoppingListService.getByGroup(groupId, userId)
+                    val from = call.request.queryParameters["from"]?.takeIf { it.isNotBlank() }?.let { LocalDate.parse(it) }
+                    val to = call.request.queryParameters["to"]?.takeIf { it.isNotBlank() }?.let { LocalDate.parse(it) }
+                    val lists = shoppingListService.getByGroup(groupId, userId, from, to)
                     call.respond(HttpStatusCode.OK, ApiResponse.success(lists))
                 }
 

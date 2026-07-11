@@ -1,19 +1,17 @@
 package com.misuper.backend.modules.statistics.services
 
-import com.misuper.backend.database.tables.BudgetItemsTable
 import com.misuper.backend.database.tables.BudgetsTable
 import com.misuper.backend.database.tables.CategoriesTable
 import com.misuper.backend.database.tables.ProductsTable
-import com.misuper.backend.database.tables.PurchaseProductsTable
-import com.misuper.backend.database.tables.PurchasesTable
-import com.misuper.backend.database.tables.StoresTable
+import com.misuper.backend.database.tables.TicketProductsTable
+import com.misuper.backend.database.tables.TicketsTable
+import com.misuper.backend.database.tables.UsersTable
 import com.misuper.backend.exceptions.ForbiddenException
 import com.misuper.backend.exceptions.NotFoundException
 import com.misuper.backend.modules.budgets.repositories.BudgetRepository
 import com.misuper.backend.modules.groups.repositories.GroupRepository
 import com.misuper.backend.modules.products.repositories.CategoryRepository
 import com.misuper.backend.modules.products.repositories.ProductRepository
-import com.misuper.backend.modules.purchases.repositories.PurchaseRepository
 import com.misuper.backend.modules.statistics.dto.BudgetProgress
 import com.misuper.backend.modules.statistics.dto.MemberSpending
 import com.misuper.backend.modules.statistics.dto.MonthlySummary
@@ -22,44 +20,48 @@ import com.misuper.backend.modules.statistics.dto.SpendingByCategory
 import com.misuper.backend.modules.statistics.dto.SpendingByImportance
 import com.misuper.backend.modules.statistics.dto.SpendingByStore
 import com.misuper.backend.modules.statistics.dto.StoreFrequency
-import com.misuper.backend.modules.stores.repositories.StoreRepository
+import com.misuper.backend.modules.tickets.repositories.TicketRepository
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.UUID
 
 class StatisticsService(
-    private val purchaseRepository: PurchaseRepository,
     private val productRepository: ProductRepository,
     private val categoryRepository: CategoryRepository,
-    private val storeRepository: StoreRepository,
     private val budgetRepository: BudgetRepository,
-    private val groupRepository: GroupRepository
+    private val groupRepository: GroupRepository,
+    private val ticketRepository: TicketRepository
 ) {
-    fun getSpendingByCategory(groupId: UUID, userId: UUID): List<SpendingByCategory> {
+    fun getSpendingByCategory(groupId: UUID, userId: UUID, from: LocalDate? = null, to: LocalDate? = null): List<SpendingByCategory> {
         checkMembership(groupId, userId)
 
-        val purchases = purchaseRepository.findByGroupId(groupId)
-        val grandTotal = purchases.sumOf { it[PurchasesTable.total] }
+        val (fromDate, toDate) = resolveDateRange(from, to)
+        val tickets = ticketRepository.findExpensesByGroupIdAndDateRange(groupId, fromDate, toDate)
+        if (tickets.isEmpty()) return emptyList()
 
         val categoryTotals = mutableMapOf<UUID, BigDecimal>()
+        var grandTotal = BigDecimal.ZERO
 
-        val processed = mutableSetOf<UUID>()
-        purchases.forEach { purchase ->
-            val purchaseId = purchase[PurchasesTable.id].value
-            if (purchaseId in processed) return@forEach
-            processed.add(purchaseId)
-
-            val items = purchaseRepository.getItems(purchaseId)
+        tickets.forEach { ticket ->
+            val ticketId = ticket[TicketsTable.id].value
+            val items = ticketRepository.getProducts(ticketId)
             items.forEach { item ->
-                val productId = item[PurchaseProductsTable.productId]?.value ?: return@forEach
+                val productId = item[TicketProductsTable.productId]?.value ?: return@forEach
                 val productRow = productRepository.findById(productId)
                 val categoryId = productRow?.let { row ->
                     try { row[ProductsTable.categoryId].value } catch (_: Exception) { null }
                 }
+                val subtotal = item[TicketProductsTable.price]?.let { price ->
+                    item[TicketProductsTable.quantity]?.let { qty -> price.multiply(qty) }
+                } ?: BigDecimal.ZERO
+
                 if (categoryId != null) {
-                    categoryTotals.merge(categoryId, item[PurchaseProductsTable.subtotal], BigDecimal::add)
+                    categoryTotals.merge(categoryId, subtotal, BigDecimal::add)
                 }
+                grandTotal = grandTotal.add(subtotal)
             }
         }
 
@@ -79,27 +81,28 @@ class StatisticsService(
         }.sortedByDescending { it.total }
     }
 
-    fun getSpendingByStore(groupId: UUID, userId: UUID): List<SpendingByStore> {
+    fun getSpendingByStore(groupId: UUID, userId: UUID, from: LocalDate? = null, to: LocalDate? = null): List<SpendingByStore> {
         checkMembership(groupId, userId)
 
-        val purchases = purchaseRepository.findByGroupId(groupId)
-        val grandTotal = purchases.sumOf { it[PurchasesTable.total] }
+        val (fromDate, toDate) = resolveDateRange(from, to)
+        val tickets = ticketRepository.findExpensesByGroupIdAndDateRange(groupId, fromDate, toDate)
+        if (tickets.isEmpty()) return emptyList()
 
-        val storeTotals = mutableMapOf<UUID?, BigDecimal>()
-        purchases.forEach { purchase ->
-            val storeId = purchase[PurchasesTable.storeId]
-            val total = purchase[PurchasesTable.total]
-            storeTotals.merge(storeId?.value, total, BigDecimal::add)
+        val storeTotals = mutableMapOf<String, BigDecimal>()
+        var grandTotal = BigDecimal.ZERO
+
+        tickets.forEach { ticket ->
+            val storeName = ticket[TicketsTable.supermarketName]
+            val amount = ticket[TicketsTable.amount]
+            storeTotals.merge(storeName, amount, BigDecimal::add)
+            grandTotal = grandTotal.add(amount)
         }
 
         val total = if (grandTotal > BigDecimal.ZERO) grandTotal else BigDecimal.ONE
 
-        return storeTotals.map { (storeId, totalSpent) ->
-            val storeName = storeId?.let { sid ->
-                storeRepository.findById(sid)?.get(StoresTable.name)
-            } ?: "Sin tienda"
+        return storeTotals.map { (storeName, totalSpent) ->
             SpendingByStore(
-                storeId = storeId?.toString(),
+                storeId = null,
                 storeName = storeName,
                 total = totalSpent,
                 percentage = totalSpent.divide(total, 4, RoundingMode.HALF_UP)
@@ -110,18 +113,19 @@ class StatisticsService(
         }.sortedByDescending { it.total }
     }
 
-    fun getMonthlySummary(groupId: UUID, userId: UUID): List<MonthlySummary> {
+    fun getMonthlySummary(groupId: UUID, userId: UUID, from: LocalDate? = null, to: LocalDate? = null): List<MonthlySummary> {
         checkMembership(groupId, userId)
 
-        val purchases = purchaseRepository.findByGroupId(groupId)
+        val (fromDate, toDate) = resolveDateRange(from, to)
+        val tickets = ticketRepository.findExpensesByGroupIdAndDateRange(groupId, fromDate, toDate)
         val monthly = mutableMapOf<Pair<Int, Int>, MutableList<BigDecimal>>()
 
-        purchases.forEach { purchase ->
-            val date = purchase[PurchasesTable.createdAt]
+        tickets.forEach { ticket ->
+            val date = ticket[TicketsTable.purchaseDate]
             val year = date.year
             val month = date.monthValue
-            val total = purchase[PurchasesTable.total]
-            monthly.getOrPut(year to month) { mutableListOf() }.add(total)
+            val amount = ticket[TicketsTable.amount]
+            monthly.getOrPut(year to month) { mutableListOf() }.add(amount)
         }
 
         return monthly.map { (yearMonth, totals) ->
@@ -134,24 +138,22 @@ class StatisticsService(
         }.sortedBy { (it.year * 100) + it.month }
     }
 
-    fun getBudgetProgress(groupId: UUID, userId: UUID): List<BudgetProgress> {
+    fun getBudgetProgress(groupId: UUID, userId: UUID, from: LocalDate? = null, to: LocalDate? = null): List<BudgetProgress> {
         checkMembership(groupId, userId)
 
-        val purchases = purchaseRepository.findByGroupId(groupId)
-        val totalSpent = purchases.sumOf { it[PurchasesTable.total] }
-
-        val budgets = budgetRepository.findByGroupId(groupId)
+        val (fromDate, toDate) = resolveDateRange(from, to)
+        val budgets = budgetRepository.findByDateRange(groupId, fromDate, toDate)
+        if (budgets.isEmpty()) return emptyList()
 
         return budgets.map { budgetRow ->
-            val budgetId = budgetRow[BudgetsTable.id].value
-            val budgetAmount = budgetRow[BudgetsTable.totalAmount]
-            val spent = if (budgetAmount > BigDecimal.ZERO) {
-                val items = budgetRepository.getItems(budgetId)
-                val now = LocalDate.now()
-                val start = budgetRow[BudgetsTable.startDate].toLocalDate()
-                val end = budgetRow[BudgetsTable.endDate]?.toLocalDate() ?: start.plusMonths(1)
-                if (now in start..end) totalSpent else BigDecimal.ZERO
-            } else BigDecimal.ZERO
+            val budgetStart = budgetRow[BudgetsTable.startDate]
+            val budgetEnd = budgetRow[BudgetsTable.endDate]
+            val budgetAmount = budgetRow[BudgetsTable.total]
+
+            val tickets = ticketRepository.findExpensesByGroupIdAndDateRange(
+                groupId, budgetStart, budgetEnd
+            )
+            val spent = tickets.sumOf { it[TicketsTable.amount] }
 
             val percentageUsed = if (budgetAmount > BigDecimal.ZERO) {
                 spent.divide(budgetAmount, 4, RoundingMode.HALF_UP)
@@ -161,35 +163,33 @@ class StatisticsService(
             } else 0.0
 
             BudgetProgress(
-                budgetId = budgetId.toString(),
-                budgetName = budgetRow[BudgetsTable.name],
+                budgetId = budgetRow[BudgetsTable.id].value.toString(),
+                budgetName = "Presupuesto ${budgetStart} - ${budgetEnd}",
                 budgetAmount = budgetAmount,
                 spent = spent,
                 percentageUsed = percentageUsed,
-                period = budgetRow[BudgetsTable.period]
+                period = "${budgetStart} / ${budgetEnd}"
             )
         }
     }
 
-    fun getSpendingByImportance(groupId: UUID, userId: UUID): List<SpendingByImportance> {
+    fun getSpendingByImportance(groupId: UUID, userId: UUID, from: LocalDate? = null, to: LocalDate? = null): List<SpendingByImportance> {
         checkMembership(groupId, userId)
 
-        val purchases = purchaseRepository.findByGroupId(groupId)
-        val grandTotal = purchases.sumOf { it[PurchasesTable.total] }
+        val (fromDate, toDate) = resolveDateRange(from, to)
+        val tickets = ticketRepository.findExpensesByGroupIdAndDateRange(groupId, fromDate, toDate)
+        if (tickets.isEmpty()) return emptyList()
 
         val importanceTotals = mutableMapOf<String, MutableList<BigDecimal>>()
-        val processedPurchases = mutableSetOf<UUID>()
-        val purchaseIdsByImportance = mutableMapOf<String, MutableSet<UUID>>()
+        val ticketIdsByImportance = mutableMapOf<String, MutableSet<UUID>>()
         val itemCountByImportance = mutableMapOf<String, Int>()
+        var grandTotal = BigDecimal.ZERO
 
-        purchases.forEach { purchase ->
-            val purchaseId = purchase[PurchasesTable.id].value
-            if (purchaseId in processedPurchases) return@forEach
-            processedPurchases.add(purchaseId)
-
-            val items = purchaseRepository.getItems(purchaseId)
+        tickets.forEach { ticket ->
+            val ticketId = ticket[TicketsTable.id].value
+            val items = ticketRepository.getProducts(ticketId)
             items.forEach { item ->
-                val productId = item[PurchaseProductsTable.productId]?.value ?: return@forEach
+                val productId = item[TicketProductsTable.productId]?.value ?: return@forEach
                 val productRow = productRepository.findById(productId)
                 val priority = productRow?.let { row ->
                     try { row[ProductsTable.priority] } catch (_: Exception) { "SECUNDARIO" }
@@ -200,10 +200,15 @@ class StatisticsService(
                     "PRIMARIO" -> "PRIMARIO"
                     else -> "SECUNDARIO"
                 }
-                importanceTotals.getOrPut(normalized) { mutableListOf() }
-                    .add(item[PurchaseProductsTable.subtotal])
-                purchaseIdsByImportance.getOrPut(normalized) { mutableSetOf() }.add(purchaseId)
+
+                val subtotal = item[TicketProductsTable.price]?.let { price ->
+                    item[TicketProductsTable.quantity]?.let { qty -> price.multiply(qty) }
+                } ?: BigDecimal.ZERO
+
+                importanceTotals.getOrPut(normalized) { mutableListOf() }.add(subtotal)
+                ticketIdsByImportance.getOrPut(normalized) { mutableSetOf() }.add(ticketId)
                 itemCountByImportance.merge(normalized, 1, Int::plus)
+                grandTotal = grandTotal.add(subtotal)
             }
         }
 
@@ -220,34 +225,34 @@ class StatisticsService(
                     .multiply(BigDecimal.valueOf(100))
                     .setScale(2, RoundingMode.HALF_UP)
                     .toDouble(),
-                purchaseCount = purchaseIdsByImportance[imp]?.size ?: 0,
+                purchaseCount = ticketIdsByImportance[imp]?.size ?: 0,
                 itemCount = itemCountByImportance[imp] ?: 0
             )
         }
     }
 
-    fun getMostFrequentStore(groupId: UUID, userId: UUID): List<StoreFrequency> {
+    fun getMostFrequentStore(groupId: UUID, userId: UUID, from: LocalDate? = null, to: LocalDate? = null): List<StoreFrequency> {
         checkMembership(groupId, userId)
 
-        val purchases = purchaseRepository.findByGroupId(groupId)
-        val grandTotal = purchases.sumOf { it[PurchasesTable.total] }
-        val totalCount = purchases.size
+        val (fromDate, toDate) = resolveDateRange(from, to)
+        val tickets = ticketRepository.findExpensesByGroupIdAndDateRange(groupId, fromDate, toDate)
+        if (tickets.isEmpty()) return emptyList()
 
-        val storeStats = mutableMapOf<UUID?, MutableList<BigDecimal>>()
-        purchases.forEach { purchase ->
-            val storeId = purchase[PurchasesTable.storeId]
-            val total = purchase[PurchasesTable.total]
-            storeStats.getOrPut(storeId?.value) { mutableListOf() }.add(total)
+        val grandTotal = tickets.sumOf { it[TicketsTable.amount] }
+        val totalCount = tickets.size
+
+        val storeStats = mutableMapOf<String, MutableList<BigDecimal>>()
+        tickets.forEach { ticket ->
+            val storeName = ticket[TicketsTable.supermarketName]
+            val amount = ticket[TicketsTable.amount]
+            storeStats.getOrPut(storeName) { mutableListOf() }.add(amount)
         }
 
         val countTotal = if (totalCount > 0) totalCount.toBigDecimal() else BigDecimal.ONE
 
-        return storeStats.map { (storeId, totals) ->
-            val storeName = storeId?.let { sid ->
-                storeRepository.findById(sid)?.get(StoresTable.name)
-            } ?: "Sin tienda"
+        return storeStats.map { (storeName, totals) ->
             StoreFrequency(
-                storeId = storeId?.toString(),
+                storeId = null,
                 storeName = storeName,
                 purchaseCount = totals.size,
                 totalSpent = totals.sumOf { it },
@@ -260,27 +265,31 @@ class StatisticsService(
         }.sortedByDescending { it.purchaseCount }
     }
 
-    fun getMostPurchasedProducts(groupId: UUID, userId: UUID): List<MostPurchasedProduct> {
+    fun getMostPurchasedProducts(groupId: UUID, userId: UUID, from: LocalDate? = null, to: LocalDate? = null): List<MostPurchasedProduct> {
         checkMembership(groupId, userId)
 
-        val purchases = purchaseRepository.findByGroupId(groupId)
+        val (fromDate, toDate) = resolveDateRange(from, to)
+        val tickets = ticketRepository.findExpensesByGroupIdAndDateRange(groupId, fromDate, toDate)
+        if (tickets.isEmpty()) return emptyList()
+
         val productCounts = mutableMapOf<String, Int>()
         val productTotals = mutableMapOf<String, BigDecimal>()
 
-        val processedPurchases = mutableSetOf<UUID>()
-        purchases.forEach { purchase ->
-            val purchaseId = purchase[PurchasesTable.id].value
-            if (purchaseId in processedPurchases) return@forEach
-            processedPurchases.add(purchaseId)
-
-            val items = purchaseRepository.getItems(purchaseId)
+        tickets.forEach { ticket ->
+            val ticketId = ticket[TicketsTable.id].value
+            val items = ticketRepository.getProducts(ticketId)
             items.forEach { item ->
-                val productId = item[PurchaseProductsTable.productId]?.value ?: return@forEach
+                val productId = item[TicketProductsTable.productId]?.value ?: return@forEach
                 val productRow = productRepository.findById(productId)
                 val productName = productRow?.get(ProductsTable.name) ?: "Producto Desconocido"
-                
-                productCounts.merge(productName, item[PurchaseProductsTable.quantity].toInt(), Int::plus)
-                productTotals.merge(productName, item[PurchaseProductsTable.subtotal], BigDecimal::add)
+
+                val quantity = item[TicketProductsTable.quantity]?.toInt() ?: 0
+                val subtotal = item[TicketProductsTable.price]?.let { price ->
+                    item[TicketProductsTable.quantity]?.let { qty -> price.multiply(qty) }
+                } ?: BigDecimal.ZERO
+
+                productCounts.merge(productName, quantity, Int::plus)
+                productTotals.merge(productName, subtotal, BigDecimal::add)
             }
         }
 
@@ -290,32 +299,37 @@ class StatisticsService(
                 count = count,
                 totalSpent = productTotals[name] ?: BigDecimal.ZERO
             )
-        }.sortedByDescending { it.count }.take(10) // Top 10
+        }.sortedByDescending { it.count }.take(10)
     }
 
-    fun getMemberSpending(groupId: UUID, userId: UUID): List<MemberSpending> {
+    fun getMemberSpending(groupId: UUID, userId: UUID, from: LocalDate? = null, to: LocalDate? = null): List<MemberSpending> {
         checkMembership(groupId, userId)
 
-        val purchases = purchaseRepository.findByGroupId(groupId)
-        val grandTotal = purchases.sumOf { it[PurchasesTable.total] }
+        val (fromDate, toDate) = resolveDateRange(from, to)
+        val tickets = ticketRepository.findExpensesByGroupIdAndDateRange(groupId, fromDate, toDate)
+        if (tickets.isEmpty()) return emptyList()
+
+        val grandTotal = tickets.sumOf { it[TicketsTable.amount] }
         val memberTotals = mutableMapOf<UUID, BigDecimal>()
         val memberCounts = mutableMapOf<UUID, Int>()
 
-        purchases.forEach { purchase ->
-            val uId = purchase[PurchasesTable.userId].value
-            val total = purchase[PurchasesTable.total]
-            memberTotals.merge(uId, total, BigDecimal::add)
+        tickets.forEach { ticket ->
+            val uId = ticket[TicketsTable.uploadedBy].value
+            val amount = ticket[TicketsTable.amount]
+            memberTotals.merge(uId, amount, BigDecimal::add)
             memberCounts.merge(uId, 1, Int::plus)
         }
 
         val total = if (grandTotal > BigDecimal.ZERO) grandTotal else BigDecimal.ONE
+        val userNameCache = mutableMapOf<UUID, String>()
 
         return memberTotals.map { (uId, totalSpent) ->
-            // En un sistema real deberíamos buscar el nombre del usuario, aquí usamos un ID o un nombre mock.
-            // Al no tener UsersTable en este repo, devolvemos "Usuario"
+            val userName = userNameCache.getOrPut(uId) {
+                groupRepository.findUserById(uId)?.get(UsersTable.fullName) ?: "Usuario"
+            }
             MemberSpending(
                 userId = uId.toString(),
-                userName = "Usuario", 
+                userName = userName,
                 totalSpent = totalSpent,
                 percentage = totalSpent.divide(total, 4, RoundingMode.HALF_UP)
                     .multiply(BigDecimal.valueOf(100))
@@ -326,10 +340,16 @@ class StatisticsService(
         }.sortedByDescending { it.totalSpent }
     }
 
+    private fun resolveDateRange(from: LocalDate?, to: LocalDate?): Pair<LocalDate, LocalDate> {
+        val fromDate = from ?: LocalDate.now().withDayOfMonth(1)
+        val toDate = to ?: LocalDate.now()
+        return fromDate to toDate
+    }
+
     private fun checkMembership(groupId: UUID, userId: UUID) {
-        val group = groupRepository.findById(groupId)
+        groupRepository.findById(groupId)
             ?: throw NotFoundException("Grupo no encontrado")
-        val memberRole = groupRepository.getMemberRole(groupId, userId)
+        groupRepository.getMemberRole(groupId, userId)
             ?: throw ForbiddenException("No eres miembro de este grupo")
     }
 }

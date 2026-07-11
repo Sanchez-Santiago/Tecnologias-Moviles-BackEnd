@@ -28,11 +28,20 @@ class BudgetRoutes(private val budgetService: BudgetService) {
                     call.respond(HttpStatusCode.OK, ApiResponse.success(budgets))
                 }
 
+                get("current") {
+                    val userId = userId(call)
+                    val groupIdStr = call.request.queryParameters["groupId"]
+                        ?: throw IllegalArgumentException("El parámetro groupId es obligatorio")
+                    val groupId = UUID.fromString(groupIdStr)
+                    val budget = budgetService.getCurrent(groupId, userId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(budget))
+                }
+
                 get("{id}") {
                     val userId = userId(call)
                     val budgetId = UUID.fromString(call.parameters["id"])
-                    val budget = budgetService.getById(budgetId, userId)
-                    call.respond(HttpStatusCode.OK, ApiResponse.success(budget))
+                    val rows = budgetService.getByGroup(budgetId, userId)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(rows))
                 }
 
                 post {
@@ -50,17 +59,10 @@ class BudgetRoutes(private val budgetService: BudgetService) {
                     call.respond(HttpStatusCode.OK, ApiResponse.success(budget))
                 }
 
-                patch("{id}/activate") {
-                    val userId = userId(call)
-                    val budgetId = UUID.fromString(call.parameters["id"])
-                    val budget = budgetService.activate(budgetId, userId)
-                    call.respond(HttpStatusCode.OK, ApiResponse.success(budget))
-                }
-
                 delete("{id}") {
                     val userId = userId(call)
                     val budgetId = UUID.fromString(call.parameters["id"])
-                    budgetService.softDelete(budgetId, userId)
+                    budgetService.delete(budgetId, userId)
                     call.respond(HttpStatusCode.OK, ApiResponse.success("Presupuesto eliminado"))
                 }
             }
