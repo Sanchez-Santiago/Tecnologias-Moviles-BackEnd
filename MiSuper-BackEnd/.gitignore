@@ -32,4 +32,4 @@ bin/
 .env
 
 ### Mac OS ###
-.DS_Store
+.DS_Store.env.bak
