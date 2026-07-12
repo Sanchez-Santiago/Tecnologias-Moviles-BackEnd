@@ -29,7 +29,6 @@ class AuthRepository {
         val insert = UsersTable.insert {
             it[fullName] = fullNameVal
             it[email] = emailVal
-            it[role] = "USER"
             it[verified] = false
             it[failedAttempts] = 0
             it[blocked] = false

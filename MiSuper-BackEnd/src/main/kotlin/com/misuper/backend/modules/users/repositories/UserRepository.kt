@@ -85,7 +85,6 @@ class UserRepository {
         if (exists == null) {
             UserSettingsTable.insert {
                 it[this.userId] = EntityID(userId, UsersTable)
-                it[language] = "es"
                 it[notificationsEnabled] = true
                 it[currency] = "ARS"
             }
@@ -99,7 +98,6 @@ class UserRepository {
         currencyVal: String?
     ) = transaction(db) {
         UserSettingsTable.update({ UserSettingsTable.userId eq EntityID(userId, UsersTable) }) { stmt ->
-            languageVal?.let { lang -> stmt[UserSettingsTable.language] = lang }
             notificationsEnabledVal?.let { enabled -> stmt[UserSettingsTable.notificationsEnabled] = enabled }
             currencyVal?.let { cur -> stmt[UserSettingsTable.currency] = cur }
             stmt[UserSettingsTable.updatedAt] = LocalDateTime.now()

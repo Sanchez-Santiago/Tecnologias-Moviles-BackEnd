@@ -9,11 +9,15 @@ import java.util.UUID
 
 object NotificationsTable : UUIDTable("notifications") {
     val userId: Column<EntityID<UUID>> = reference("user_id", UsersTable)
+    val groupId: Column<EntityID<UUID>?> = reference("group_id", GroupsTable).nullable()
     val type: Column<String> = varchar("type", 50)
     val title: Column<String> = varchar("title", 200)
+    val description: Column<String> = text("description")
     val message: Column<String> = text("message")
     val data: Column<String?> = text("data").nullable()
     val read: Column<Boolean> = bool("read").default(false)
+    val readAt: Column<LocalDateTime?> = datetime("read_at").nullable()
     val active: Column<Boolean> = bool("active").default(true)
     val createdAt: Column<LocalDateTime> = datetime("created_at").clientDefault { LocalDateTime.now() }
+    val updatedAt: Column<LocalDateTime> = datetime("updated_at").clientDefault { LocalDateTime.now() }
 }

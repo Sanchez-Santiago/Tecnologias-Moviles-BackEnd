@@ -20,8 +20,14 @@ class GroupInvitationRepository {
     private val db get() = DatabaseFactory.getDatabase()
 
     fun create(groupId: UUID, invitedEmail: String, invitedBy: UUID): UUID = transaction(db) {
+        val invitedUser = UsersTable.selectAll()
+            .where { UsersTable.email eq invitedEmail.lowercase() }
+            .singleOrNull()
+            ?: throw IllegalArgumentException("Usuario no encontrado: $invitedEmail")
+        val invitedUserIdVal = invitedUser[UsersTable.id].value
         GroupInvitationsTable.insert {
             it[GroupInvitationsTable.groupId] = EntityID(groupId, GroupsTable)
+            it[GroupInvitationsTable.invitedUserId] = EntityID(invitedUserIdVal, UsersTable)
             it[GroupInvitationsTable.invitedEmail] = invitedEmail.lowercase()
             it[GroupInvitationsTable.invitedBy] = EntityID(invitedBy, UsersTable)
         }[GroupInvitationsTable.id].value
@@ -55,7 +61,6 @@ class GroupInvitationRepository {
     fun updateStatus(id: UUID, newStatus: String) = transaction(db) {
         GroupInvitationsTable.update({ GroupInvitationsTable.id eq id }) {
             it[GroupInvitationsTable.status] = newStatus
-            it[GroupInvitationsTable.updatedAt] = LocalDateTime.now()
         }
     }
 }

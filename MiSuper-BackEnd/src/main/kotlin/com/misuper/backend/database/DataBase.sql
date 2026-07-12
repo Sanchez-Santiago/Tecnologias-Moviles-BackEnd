@@ -14,6 +14,10 @@ CREATE TABLE public.users (
   active boolean NOT NULL DEFAULT true,
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  profile_picture_url text,
+  failed_attempts integer NOT NULL DEFAULT 0,
+  blocked boolean NOT NULL DEFAULT false,
+  password_hash text NOT NULL DEFAULT ''::text,
   CONSTRAINT users_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.user_credentials (
@@ -48,6 +52,13 @@ CREATE TABLE public.user_settings (
   biometric_login boolean NOT NULL DEFAULT false,
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  currency character varying NOT NULL DEFAULT 'ARS'::character varying,
+  push_enabled boolean NOT NULL DEFAULT true,
+  email_enabled boolean NOT NULL DEFAULT false,
+  budget_notifications boolean NOT NULL DEFAULT true,
+  shopping_notifications boolean NOT NULL DEFAULT true,
+  invitation_notifications boolean NOT NULL DEFAULT true,
+  ai_notifications boolean NOT NULL DEFAULT true,
   CONSTRAINT user_settings_pkey PRIMARY KEY (id),
   CONSTRAINT fk_settings_user FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
@@ -59,6 +70,8 @@ CREATE TABLE public.login_history (
   device character varying,
   success boolean NOT NULL,
   reason character varying,
+  user_agent text,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
   CONSTRAINT login_history_pkey PRIMARY KEY (id),
   CONSTRAINT fk_login_user FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
@@ -67,12 +80,14 @@ CREATE TABLE public.groups (
   owner_id uuid NOT NULL,
   name character varying NOT NULL,
   description text,
-  type character varying NOT NULL CHECK (type::text = ANY (ARRAY['PERSONAL'::character varying, 'FAMILY'::character varying, 'WORK'::character varying, 'FRIENDS'::character varying, 'OTHER'::character varying]::text[])),
+  type character varying NOT NULL DEFAULT 'FAMILIA'::character varying CHECK (type::text = ANY (ARRAY['PERSONAL'::character varying, 'FAMILY'::character varying, 'WORK'::character varying, 'FRIENDS'::character varying, 'OTHER'::character varying]::text[])),
   is_personal boolean NOT NULL DEFAULT false,
   cycle_day integer NOT NULL DEFAULT 1 CHECK (cycle_day >= 1 AND cycle_day <= 28),
   active boolean NOT NULL DEFAULT true,
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  categoria character varying NOT NULL DEFAULT 'FAMILIA'::character varying,
+  created_by uuid,
   CONSTRAINT groups_pkey PRIMARY KEY (id),
   CONSTRAINT fk_group_owner FOREIGN KEY (owner_id) REFERENCES public.users(id)
 );
@@ -97,6 +112,8 @@ CREATE TABLE public.group_invitations (
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   expires_at timestamp without time zone,
   accepted_at timestamp without time zone,
+  invited_email character varying,
+  token character varying NOT NULL DEFAULT (gen_random_uuid())::text,
   CONSTRAINT group_invitations_pkey PRIMARY KEY (id),
   CONSTRAINT fk_invitation_group FOREIGN KEY (group_id) REFERENCES public.groups(id),
   CONSTRAINT fk_invitation_user FOREIGN KEY (invited_user_id) REFERENCES public.users(id),
@@ -108,8 +125,6 @@ CREATE TABLE public.group_settings (
   currency character varying NOT NULL DEFAULT 'ARS'::character varying,
   notifications_enabled boolean NOT NULL DEFAULT true,
   ai_enabled boolean NOT NULL DEFAULT true,
-  allow_member_invite boolean NOT NULL DEFAULT false,
-  allow_member_delete boolean NOT NULL DEFAULT false,
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   updated_at timestamp without time zone NOT NULL DEFAULT now(),
   CONSTRAINT group_settings_pkey PRIMARY KEY (id),
@@ -136,6 +151,9 @@ CREATE TABLE public.products (
   active boolean NOT NULL DEFAULT true,
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  priority character varying NOT NULL DEFAULT 'SECUNDARIO'::character varying,
+  price numeric NOT NULL DEFAULT 0,
+  image_url text,
   CONSTRAINT products_pkey PRIMARY KEY (id),
   CONSTRAINT fk_product_category FOREIGN KEY (category_id) REFERENCES public.categories(id)
 );
@@ -145,7 +163,7 @@ CREATE TABLE public.shopping_lists (
   created_by uuid NOT NULL,
   name character varying NOT NULL,
   description text,
-
+  keep_between_periods boolean NOT NULL DEFAULT true,
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   updated_at timestamp without time zone NOT NULL DEFAULT now(),
   CONSTRAINT shopping_lists_pkey PRIMARY KEY (id),
@@ -173,24 +191,6 @@ CREATE TABLE public.shopping_list_items (
   CONSTRAINT fk_item_product FOREIGN KEY (product_id) REFERENCES public.products(id),
   CONSTRAINT fk_item_user FOREIGN KEY (created_by) REFERENCES public.users(id)
 );
-
-CREATE TABLE public.tickets (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  group_id uuid NOT NULL,
-  uploaded_by uuid NOT NULL,
-  supermarket_name character varying NOT NULL,
-  amount numeric NOT NULL,
-  movement_type character varying CHECK (movement_type::text = ANY (ARRAY['EXPENSE'::character varying, 'INCOME'::character varying]::text[])),
-  purchase_date timestamp without time zone NOT NULL,
-  image_url text,
-  comment text,
-  created_at timestamp without time zone NOT NULL DEFAULT now(),
-  updated_at timestamp without time zone NOT NULL DEFAULT now(),
-  status character varying NOT NULL DEFAULT 'PENDING'::character varying CHECK (status::text = ANY (ARRAY['PENDING'::character varying, 'PROCESSING'::character varying, 'PROCESSED'::character varying, 'ERROR'::character varying]::text[])),
-  CONSTRAINT tickets_pkey PRIMARY KEY (id),
-  CONSTRAINT tickets_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
-  CONSTRAINT tickets_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id)
-);
 CREATE TABLE public.ticket_products (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   ticket_id uuid NOT NULL,
@@ -201,21 +201,7 @@ CREATE TABLE public.ticket_products (
   brand character varying,
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   CONSTRAINT ticket_products_pkey PRIMARY KEY (id),
-  CONSTRAINT ticket_products_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id),
-  CONSTRAINT ticket_products_ticket_id_fkey FOREIGN KEY (ticket_id) REFERENCES public.tickets(id)
-);
-CREATE TABLE public.budgets (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  group_id uuid NOT NULL,
-  start_date date NOT NULL,
-  end_date date NOT NULL,
-  total numeric NOT NULL,
-  created_by uuid,
-  created_at timestamp without time zone NOT NULL DEFAULT now(),
-  updated_at timestamp without time zone NOT NULL DEFAULT now(),
-  CONSTRAINT budgets_pkey PRIMARY KEY (id),
-  CONSTRAINT budgets_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
-  CONSTRAINT budgets_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+  CONSTRAINT ticket_products_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
 );
 CREATE TABLE public.notifications (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -227,23 +213,13 @@ CREATE TABLE public.notifications (
   read boolean NOT NULL DEFAULT false,
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   read_at timestamp without time zone,
+  active boolean NOT NULL DEFAULT true,
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  message text NOT NULL DEFAULT ''::text,
+  data text,
   CONSTRAINT notifications_pkey PRIMARY KEY (id),
   CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT notifications_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id)
-);
-CREATE TABLE public.notification_settings (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL UNIQUE,
-  push_enabled boolean NOT NULL DEFAULT true,
-  email_enabled boolean NOT NULL DEFAULT false,
-  budget_notifications boolean NOT NULL DEFAULT true,
-  shopping_notifications boolean NOT NULL DEFAULT true,
-  invitation_notifications boolean NOT NULL DEFAULT true,
-  ai_notifications boolean NOT NULL DEFAULT true,
-  created_at timestamp without time zone NOT NULL DEFAULT now(),
-  updated_at timestamp without time zone NOT NULL DEFAULT now(),
-  CONSTRAINT notification_settings_pkey PRIMARY KEY (id),
-  CONSTRAINT notification_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.ticket_analysis (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -253,20 +229,7 @@ CREATE TABLE public.ticket_analysis (
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   status character varying NOT NULL DEFAULT 'PENDING'::character varying CHECK (status::text = ANY (ARRAY['PENDING'::character varying, 'PROCESSING'::character varying, 'PROCESSED'::character varying, 'ERROR'::character varying]::text[])),
   processed_at timestamp without time zone,
-  CONSTRAINT ticket_analysis_pkey PRIMARY KEY (id),
-  CONSTRAINT ticket_analysis_ticket_id_fkey FOREIGN KEY (ticket_id) REFERENCES public.tickets(id)
-);
-CREATE TABLE public.ai_recommendations (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  group_id uuid NOT NULL,
-  generated_at timestamp without time zone NOT NULL DEFAULT now(),
-  type character varying CHECK (type::text = ANY (ARRAY['SAVING'::character varying, 'WARNING'::character varying, 'SHOPPING'::character varying, 'PRICE'::character varying, 'BUDGET'::character varying, 'GENERAL'::character varying]::text[])),
-  title character varying NOT NULL,
-  description text NOT NULL,
-  priority character varying CHECK (priority::text = ANY (ARRAY['LOW'::character varying, 'MEDIUM'::character varying, 'HIGH'::character varying]::text[])),
-  read boolean NOT NULL DEFAULT false,
-  CONSTRAINT ai_recommendations_pkey PRIMARY KEY (id),
-  CONSTRAINT ai_recommendations_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id)
+  CONSTRAINT ticket_analysis_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.audit_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -281,16 +244,6 @@ CREATE TABLE public.audit_logs (
   CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
   CONSTRAINT audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
-CREATE TABLE public.ai_reports (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  group_id uuid NOT NULL,
-  title character varying NOT NULL,
-  summary text NOT NULL,
-  recommendations text,
-  created_at timestamp without time zone NOT NULL DEFAULT now(),
-  CONSTRAINT ai_reports_pkey PRIMARY KEY (id),
-  CONSTRAINT ai_reports_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id)
-);
 CREATE TABLE public.ai_actions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   ticket_id uuid,
@@ -301,6 +254,87 @@ CREATE TABLE public.ai_actions (
   accepted boolean,
   created_at timestamp without time zone NOT NULL DEFAULT now(),
   CONSTRAINT ai_actions_pkey PRIMARY KEY (id),
-  CONSTRAINT ai_actions_ticket_id_fkey FOREIGN KEY (ticket_id) REFERENCES public.tickets(id),
   CONSTRAINT ai_actions_shopping_list_item_id_fkey FOREIGN KEY (shopping_list_item_id) REFERENCES public.shopping_list_items(id)
+);
+CREATE TABLE public.flyway_schema_history (
+  installed_rank integer NOT NULL,
+  version character varying,
+  description character varying NOT NULL,
+  type character varying NOT NULL,
+  script character varying NOT NULL,
+  checksum integer,
+  installed_by character varying NOT NULL,
+  installed_on timestamp without time zone NOT NULL DEFAULT now(),
+  execution_time integer NOT NULL,
+  success boolean NOT NULL,
+  CONSTRAINT flyway_schema_history_pkey PRIMARY KEY (installed_rank)
+);
+CREATE TABLE public.refresh_tokens (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  token text NOT NULL,
+  expires_at timestamp without time zone NOT NULL,
+  used boolean NOT NULL DEFAULT false,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT refresh_tokens_pkey PRIMARY KEY (id),
+  CONSTRAINT refresh_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.stores (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL,
+  address text,
+  phone character varying,
+  latitude double precision,
+  longitude double precision,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT stores_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.offers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  store_id uuid,
+  title character varying NOT NULL,
+  description text,
+  discount_type character varying NOT NULL,
+  discount_value numeric NOT NULL,
+  start_date timestamp without time zone NOT NULL,
+  end_date timestamp without time zone NOT NULL,
+  image_url text,
+  terms_conditions text,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT offers_pkey PRIMARY KEY (id),
+  CONSTRAINT offers_store_id_fkey FOREIGN KEY (store_id) REFERENCES public.stores(id)
+);
+CREATE TABLE public.budgets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  total numeric NOT NULL,
+  created_by uuid,
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT budgets_pkey PRIMARY KEY (id),
+  CONSTRAINT budgets_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
+  CONSTRAINT budgets_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.tickets (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL,
+  uploaded_by uuid NOT NULL,
+  supermarket_name character varying NOT NULL,
+  amount numeric NOT NULL,
+  movement_type character varying CHECK (movement_type::text = ANY (ARRAY['EXPENSE'::character varying, 'INCOME'::character varying]::text[])),
+  purchase_date timestamp without time zone NOT NULL,
+  image_url text,
+  comment text,
+  status character varying NOT NULL DEFAULT 'PENDING'::character varying CHECK (status::text = ANY (ARRAY['PENDING'::character varying, 'PROCESSING'::character varying, 'PROCESSED'::character varying, 'ERROR'::character varying]::text[])),
+  created_at timestamp without time zone NOT NULL DEFAULT now(),
+  updated_at timestamp without time zone NOT NULL DEFAULT now(),
+  CONSTRAINT tickets_pkey PRIMARY KEY (id),
+  CONSTRAINT tickets_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
+  CONSTRAINT tickets_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id)
 );

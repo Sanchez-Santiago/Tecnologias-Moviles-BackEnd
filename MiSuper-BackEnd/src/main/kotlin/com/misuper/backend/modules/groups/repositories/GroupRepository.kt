@@ -39,8 +39,10 @@ class GroupRepository {
         GroupsTable.insert {
             it[name] = nameVal
             it[description] = descriptionVal
+            it[GroupsTable.type] = "FAMILY"
             if (categoriaVal != null) it[categoria] = categoriaVal
             it[createdBy] = EntityID(createdByVal, UsersTable)
+            it[ownerId] = EntityID(createdByVal, UsersTable)
         }[GroupsTable.id].value
     }
 

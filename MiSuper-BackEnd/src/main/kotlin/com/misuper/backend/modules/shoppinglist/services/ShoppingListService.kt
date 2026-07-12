@@ -8,6 +8,7 @@ import com.misuper.backend.exceptions.NotFoundException
 import com.misuper.backend.modules.groups.repositories.GroupRepository
 import com.misuper.backend.modules.shoppinglist.dto.*
 import com.misuper.backend.modules.shoppinglist.repositories.ShoppingListRepository
+import com.misuper.backend.modules.shoppinglist.validators.ShoppingListValidator
 import org.jetbrains.exposed.v1.core.ResultRow
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -85,6 +86,8 @@ class ShoppingListService(
     }
 
     fun addProduct(listId: UUID, userId: UUID, request: AddProductRequest): ShoppingListResponse {
+        ShoppingListValidator.validateAddProduct(request)
+
         val row = shoppingListRepository.findById(listId)
             ?: throw NotFoundException("Lista de compra no encontrada")
 

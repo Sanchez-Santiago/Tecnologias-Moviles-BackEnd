@@ -49,6 +49,7 @@ class NotificationRepository {
             stmt[NotificationsTable.userId] = EntityID(userIdVal, UsersTable)
             stmt[NotificationsTable.type] = typeVal
             stmt[NotificationsTable.title] = titleVal
+            stmt[NotificationsTable.description] = messageVal
             stmt[NotificationsTable.message] = messageVal
             stmt[NotificationsTable.data] = dataVal
         }
