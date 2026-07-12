@@ -31,6 +31,7 @@ import com.misuper.backend.modules.statistics.routes.StatisticsRoutes
 import com.misuper.backend.modules.statistics.services.StatisticsService
 import com.misuper.backend.modules.tickets.repositories.TicketRepository
 import com.misuper.backend.modules.tickets.routes.TicketRoutes
+import com.misuper.backend.modules.tickets.services.TicketAnalysisService
 import com.misuper.backend.modules.tickets.services.TicketService
 import com.misuper.backend.modules.stores.repositories.StoreRepository
 import com.misuper.backend.modules.stores.routes.StoreRoutes
@@ -172,7 +173,8 @@ fun main() {
 
     val ticketRepository = TicketRepository()
     val ticketService = TicketService(ticketRepository, groupRepository)
-    val ticketRoutes = TicketRoutes(ticketService)
+    val ticketAnalysisService = TicketAnalysisService()
+    val ticketRoutes = TicketRoutes(ticketService, ticketAnalysisService)
 
     val budgetRepository = BudgetRepository()
     val budgetService = BudgetService(budgetRepository, groupRepository)

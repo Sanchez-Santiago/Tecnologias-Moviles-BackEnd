@@ -57,16 +57,6 @@ data class StoreFrequency(
 )
 
 @Serializable
-data class GroupStatsResponse(
-    val totalSpent: String,
-    val totalPurchases: Int,
-    val averagePerPurchase: String,
-    val spendingByCategory: List<SpendingByCategory>,
-    val spendingByStore: List<SpendingByStore>,
-    val monthlySummary: List<MonthlySummary>
-)
-
-@Serializable
 data class MostPurchasedProduct(
     val productName: String,
     val count: Int,

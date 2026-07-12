@@ -1,7 +1,9 @@
 package com.misuper.backend.modules.tickets.routes
 
+import com.misuper.backend.modules.tickets.dto.AnalyzeTicketImageRequest
 import com.misuper.backend.modules.tickets.dto.CreateTicketRequest
 import com.misuper.backend.modules.tickets.dto.UpdateTicketRequest
+import com.misuper.backend.modules.tickets.services.TicketAnalysisService
 import com.misuper.backend.modules.tickets.services.TicketService
 import com.misuper.backend.responses.ApiResponse
 import io.ktor.http.*
@@ -14,7 +16,10 @@ import io.ktor.server.routing.*
 import java.time.LocalDate
 import java.util.UUID
 
-class TicketRoutes(private val ticketService: TicketService) {
+class TicketRoutes(
+    private val ticketService: TicketService,
+    private val ticketAnalysisService: TicketAnalysisService
+) {
 
     fun register(routing: Route) {
         routing.route("tickets") {
@@ -67,6 +72,12 @@ class TicketRoutes(private val ticketService: TicketService) {
                     val ticketId = UUID.fromString(call.parameters["id"])
                     ticketService.delete(ticketId, userId)
                     call.respond(HttpStatusCode.OK, ApiResponse.success("Ticket eliminado"))
+                }
+
+                post("analyze-image") {
+                    val request = call.receive<AnalyzeTicketImageRequest>()
+                    val result = ticketAnalysisService.analyze(request.imageBase64, request.mimeType)
+                    call.respond(HttpStatusCode.OK, ApiResponse.success(result))
                 }
             }
         }
