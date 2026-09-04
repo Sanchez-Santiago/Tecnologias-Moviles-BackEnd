@@ -1,5 +1,11 @@
 # MiSuper / Super Ahorro - Backend
 
+![Banner del proyecto](assets/banner.svg)
+
+> 🚀 **Desplegado en producción:** [https://tecnologias-moviles-backend-s2ho.onrender.com/](https://tecnologias-moviles-backend-s2ho.onrender.com/)
+>
+> Health check: `GET /` → `{"status":"ok","database":{"connected":true,...}}`
+
 Backend del proyecto **Super Ahorro**, una aplicación para registrar compras de supermercado, controlar gastos y manejar información compartida dentro de grupos.
 
 El proyecto está hecho con Kotlin y Ktor. Expone una API REST que consume la app cliente y se conecta a una base PostgreSQL.
@@ -26,7 +32,7 @@ El backend implementa estos módulos principales:
 - Notificaciones.
 - Tickets de soporte.
 
-También se agregó un endpoint para analizar imágenes de tickets con OpenAI. El endpoint recibe una imagen en Base64 y devuelve datos extraídos del ticket, como comercio, fecha, total y productos.
+También se agregó un endpoint para analizar imágenes de tickets con Gemini. El endpoint recibe una imagen en Base64 y devuelve datos extraídos del ticket, como comercio, fecha, total y productos.
 
 ## Tecnologías usadas
 
@@ -276,8 +282,8 @@ Variables más importantes:
 | `PASSWORD_HASH_COST` | Costo de BCrypt |
 | `PASSWORD_HISTORY_SIZE` | Cantidad de contraseñas en historial |
 | `CORS_ALLOWED_HOSTS` | Hosts permitidos por CORS |
-| `OPENAI_API_KEY` | API key para analizar tickets |
-| `OPENAI_MODEL` | Modelo usado para analizar tickets |
+| `GEMINI_API_KEY` | Clave de API de Gemini para analizar tickets y sugerir ofertas |
+| `GEMINI_MODEL` | Modelo de Gemini usado (por defecto `gemini-2.0-flash`) |
 
 ## Cómo ejecutar
 
