@@ -1,6 +1,6 @@
 # MiSuper / Super Ahorro - Backend
 
-![Banner del proyecto](assets/banner.svg)
+![Banner del proyecto](assets/banner.jpg)
 
 > 🚀 **Desplegado en producción:** [https://tecnologias-moviles-backend-s2ho.onrender.com/](https://tecnologias-moviles-backend-s2ho.onrender.com/)
 >
@@ -14,6 +14,14 @@ El proyecto está hecho con Kotlin y Ktor. Expone una API REST que consume la ap
 
 - Santiago Sanchez
 - Giuliano Pucci
+
+## Documentación de la API
+
+Explorá y probá los endpoints en la documentación interactiva desplegada:
+
+[**https://tecnologias-moviles-backend-s2ho.onrender.com/docs**](https://tecnologias-moviles-backend-s2ho.onrender.com/docs)
+
+![Documentación interactiva de la API](assets/captura.png)
 
 ## Qué incluye
 
@@ -136,6 +144,7 @@ Hay 68 rutas registradas.
 | Método | Ruta | Descripción |
 |---|---|---|
 | `GET` | `/` | Health check |
+| `GET` | `/docs` | Swagger UI (doc interactiva) |
 | `GET` | `/openapi.yaml` | Archivo OpenAPI |
 | `POST` | `/api/auth/register` | Registro |
 | `POST` | `/api/auth/login` | Login |
@@ -324,6 +333,7 @@ cd MiSuper-BackEnd
 - Autenticación JWT con access token y refresh token.
 - Hashing de contraseñas con BCrypt.
 - OpenAPI disponible en `/openapi.yaml`.
+- Swagger UI desplegada en `/docs`.
 - Docker y configuración de despliegue incluidos.
 - Rate limiting aplicado a autenticación.
 - Tests unitarios básicos de seguridad.
@@ -334,5 +344,4 @@ cd MiSuper-BackEnd
 - Agregar saldos o liquidaciones por usuario.
 - Ampliar tests unitarios y sumar tests de integración.
 - Agregar paginación en listados grandes.
-- Agregar Swagger UI.
 - Mejorar el flujo para guardar automáticamente productos detectados desde imágenes de tickets.
